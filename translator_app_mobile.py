@@ -3,7 +3,6 @@ from deep_translator import GoogleTranslator
 from gtts import gTTS
 import os, json
 from datetime import datetime
-from fuzzywuzzy import process
 
 # -----------------------------
 # User System (Login / Signup)
@@ -88,8 +87,11 @@ if not st.session_state.logged_in:
 # -----------------------------
 # Translator Section
 # -----------------------------
+# Get full language names
 langs = GoogleTranslator(source='auto', target='en').get_supported_languages(as_dict=True)
+code_to_name = {code: name for code, name in langs.items()}
 name_to_code = {name.lower(): code for code, name in langs.items()}
+sorted_langs = sorted(name_to_code.keys())
 
 st.success(f"👋 Logged in as {st.session_state.username}")
 st.markdown("---")
@@ -97,15 +99,25 @@ st.markdown("---")
 st.subheader("📝 Enter text to translate:")
 text = st.text_area("Type or paste text here", height=100)
 
-target_lang = st.selectbox("🎯 Choose target language:", list(name_to_code.keys()))
+target_lang = st.selectbox(
+    "🎯 Choose target language:",
+    sorted_langs,
+    index=sorted_langs.index("english") if "english" in sorted_langs else 0
+)
 target_code = name_to_code[target_lang.lower()]
 
+# -----------------------------
+# Save Translation History
+# -----------------------------
 def save_translation(src_text, target_lang, translated):
     with open("Translator_History.txt", "a", encoding="utf-8") as f:
         f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ({st.session_state.username})\n")
         f.write(f"Source: {src_text}\nTranslated ({target_lang}): {translated}\n")
         f.write("-"*50 + "\n")
 
+# -----------------------------
+# Translate Button
+# -----------------------------
 if st.button("🌐 Translate"):
     if text.strip():
         translated = GoogleTranslator(source='auto', target=target_code).translate(text)
@@ -116,16 +128,17 @@ if st.button("🌐 Translate"):
         try:
             tts = gTTS(text=translated, lang=target_code)
             tts.save("voice.mp3")
-            audio_file = open("voice.mp3", "rb")
-            st.audio(audio_file.read(), format="audio/mp3")
-            audio_file.close()
+            with open("voice.mp3", "rb") as audio_file:
+                st.audio(audio_file.read(), format="audio/mp3")
             os.remove("voice.mp3")
         except Exception:
             st.warning("⚠️ Voice not available for this language.")
     else:
         st.warning("⚠️ Please enter some text first.")
 
-# Logout
+# -----------------------------
+# Logout Button
+# -----------------------------
 if st.button("🚪 Logout"):
     st.session_state.logged_in = False
     st.session_state.username = ""
