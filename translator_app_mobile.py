@@ -1,679 +1,131 @@
-{
- "cells": [
-  {
-   "cell_type": "code",
-   "execution_count": 1,
-   "id": "7c1021f8-e436-4f57-aeb1-aa245f12e041",
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "Requirement already satisfied: deep-translator in c:\\users\\sohail computer\\anaconda3\\lib\\site-packages (1.11.4)\n",
-      "Requirement already satisfied: gTTS in c:\\users\\sohail computer\\anaconda3\\lib\\site-packages (2.5.4)\n",
-      "Requirement already satisfied: playsound==1.2.2 in c:\\users\\sohail computer\\anaconda3\\lib\\site-packages (1.2.2)\n",
-      "Requirement already satisfied: fuzzywuzzy in c:\\users\\sohail computer\\anaconda3\\lib\\site-packages (0.18.0)\n",
-      "Requirement already satisfied: python-Levenshtein in c:\\users\\sohail computer\\anaconda3\\lib\\site-packages (0.27.1)\n",
-      "Requirement already satisfied: beautifulsoup4<5.0.0,>=4.9.1 in c:\\users\\sohail computer\\anaconda3\\lib\\site-packages (from deep-translator) (4.12.3)\n",
-      "Requirement already satisfied: requests<3.0.0,>=2.23.0 in c:\\users\\sohail computer\\anaconda3\\lib\\site-packages (from deep-translator) (2.32.3)\n",
-      "Requirement already satisfied: soupsieve>1.2 in c:\\users\\sohail computer\\anaconda3\\lib\\site-packages (from beautifulsoup4<5.0.0,>=4.9.1->deep-translator) (2.5)\n",
-      "Requirement already satisfied: charset-normalizer<4,>=2 in c:\\users\\sohail computer\\anaconda3\\lib\\site-packages (from requests<3.0.0,>=2.23.0->deep-translator) (3.3.2)\n",
-      "Requirement already satisfied: idna<4,>=2.5 in c:\\users\\sohail computer\\anaconda3\\lib\\site-packages (from requests<3.0.0,>=2.23.0->deep-translator) (2.10)\n",
-      "Requirement already satisfied: urllib3<3,>=1.21.1 in c:\\users\\sohail computer\\anaconda3\\lib\\site-packages (from requests<3.0.0,>=2.23.0->deep-translator) (2.3.0)\n",
-      "Requirement already satisfied: certifi>=2017.4.17 in c:\\users\\sohail computer\\anaconda3\\lib\\site-packages (from requests<3.0.0,>=2.23.0->deep-translator) (2025.4.26)\n",
-      "Requirement already satisfied: click<8.2,>=7.1 in c:\\users\\sohail computer\\anaconda3\\lib\\site-packages (from gTTS) (8.1.8)\n",
-      "Requirement already satisfied: colorama in c:\\users\\sohail computer\\anaconda3\\lib\\site-packages (from click<8.2,>=7.1->gTTS) (0.4.6)\n",
-      "Requirement already satisfied: Levenshtein==0.27.1 in c:\\users\\sohail computer\\anaconda3\\lib\\site-packages (from python-Levenshtein) (0.27.1)\n",
-      "Requirement already satisfied: rapidfuzz<4.0.0,>=3.9.0 in c:\\users\\sohail computer\\anaconda3\\lib\\site-packages (from Levenshtein==0.27.1->python-Levenshtein) (3.14.1)\n"
-     ]
-    }
-   ],
-   "source": [
-    "!pip install deep-translator gTTS playsound==1.2.2 fuzzywuzzy python-Levenshtein\n"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 2,
-   "id": "fc1f0081-dc57-4c40-b0f4-712e7aa8339e",
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "🌍 Welcome to English ↔ 100+ Languages Translator + Voice\n",
-      "\n",
-      "💡 Examples: Urdu, Pashto, Saraiki, Arabic, Hindi, Chinese\n",
-      "💾 Translations auto-saved\n",
-      "Type 'exit' anytime to quit.\n",
-      "\n"
-     ]
-    },
-    {
-     "name": "stdin",
-     "output_type": "stream",
-     "text": [
-      "\n",
-      "📝 Enter text to translate (or 'exit' to quit):  Good morning everyone.\n",
-      "🎯 Enter target language (e.g., Urdu, Pashto, Saraiki):  Urdu\n"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "🔍 Using 'Ur' as target language\n",
-      "⚠️ Error: HTTPSConnectionPool(host='translate.google.com', port=443): Max retries exceeded with url: /m?tl=ur&sl=auto&q=Good+morning+everyone. (Caused by NameResolutionError(\"<urllib3.connection.HTTPSConnection object at 0x000001FD56628C20>: Failed to resolve 'translate.google.com' ([Errno 11001] getaddrinfo failed)\"))\n"
-     ]
-    },
-    {
-     "name": "stdin",
-     "output_type": "stream",
-     "text": [
-      "\n",
-      "📝 Enter text to translate (or 'exit' to quit):  Good morning everyone.\n",
-      "🎯 Enter target language (e.g., Urdu, Pashto, Saraiki):  Pashto\n"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "🔍 Using 'As' as target language\n",
-      "⚠️ Error: HTTPSConnectionPool(host='translate.google.com', port=443): Max retries exceeded with url: /m?tl=as&sl=auto&q=Good+morning+everyone. (Caused by NameResolutionError(\"<urllib3.connection.HTTPSConnection object at 0x000001FD565EB9D0>: Failed to resolve 'translate.google.com' ([Errno 11001] getaddrinfo failed)\"))\n"
-     ]
-    },
-    {
-     "name": "stdin",
-     "output_type": "stream",
-     "text": [
-      "\n",
-      "📝 Enter text to translate (or 'exit' to quit):  quit\n",
-      "🎯 Enter target language (e.g., Urdu, Pashto, Saraiki):  urdu\n"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "🔍 Using 'Ur' as target language\n",
-      "\n",
-      "➡️ Translation in Urdu:\n",
-      "چھوڑ دیں\n",
-      "\n",
-      "💾 Saved successfully.\n",
-      "\n"
-     ]
-    },
-    {
-     "name": "stdin",
-     "output_type": "stream",
-     "text": [
-      "🔊 Hear translated voice? (yes/no):  no\n",
-      "🔁 Translate back to English? (yes/no):  no\n",
-      "\n",
-      "📝 Enter text to translate (or 'exit' to quit):  Good morning\n",
-      "🎯 Enter target language (e.g., Urdu, Pashto, Saraiki):  pashto\n"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "🔍 Using 'As' as target language\n",
-      "\n",
-      "➡️ Translation in Pashto:\n",
-      "সুপ্ৰভাত\n",
-      "\n",
-      "💾 Saved successfully.\n",
-      "\n"
-     ]
-    },
-    {
-     "name": "stdin",
-     "output_type": "stream",
-     "text": [
-      "🔊 Hear translated voice? (yes/no):  no\n",
-      "🔁 Translate back to English? (yes/no):  mo\n",
-      "\n",
-      "📝 Enter text to translate (or 'exit' to quit):  How are you?\n",
-      "🎯 Enter target language (e.g., Urdu, Pashto, Saraiki):  hindi\n"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "🔍 Using 'Hi' as target language\n",
-      "\n",
-      "➡️ Translation in Hindi:\n",
-      "आप कैसे हैं?\n",
-      "\n",
-      "💾 Saved successfully.\n",
-      "\n"
-     ]
-    },
-    {
-     "name": "stdin",
-     "output_type": "stream",
-     "text": [
-      "🔊 Hear translated voice? (yes/no):  yes\n"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "⚠️ Voice Error: Language not supported: hindi\n"
-     ]
-    },
-    {
-     "name": "stdin",
-     "output_type": "stream",
-     "text": [
-      "🔁 Translate back to English? (yes/no):  yes\n"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "\n",
-      "🔁 Back to English:\n",
-      "How are you?\n",
-      "\n"
-     ]
-    },
-    {
-     "name": "stdin",
-     "output_type": "stream",
-     "text": [
-      "\n",
-      "📝 Enter text to translate (or 'exit' to quit):  Good morning\n",
-      "🎯 Enter target language (e.g., Urdu, Pashto, Saraiki):  pashto\n"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "🔍 Using 'As' as target language\n",
-      "\n",
-      "➡️ Translation in Pashto:\n",
-      "সুপ্ৰভাত\n",
-      "\n",
-      "💾 Saved successfully.\n",
-      "\n"
-     ]
-    },
-    {
-     "name": "stdin",
-     "output_type": "stream",
-     "text": [
-      "🔊 Hear translated voice? (yes/no):  no\n",
-      "🔁 Translate back to English? (yes/no):  no\n",
-      "\n",
-      "📝 Enter text to translate (or 'exit' to quit):  pagal\n",
-      "🎯 Enter target language (e.g., Urdu, Pashto, Saraiki):  saraiki\n"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "🔍 Using 'Ar' as target language\n",
-      "\n",
-      "➡️ Translation in Saraiki:\n",
-      "وفق\n",
-      "\n",
-      "💾 Saved successfully.\n",
-      "\n"
-     ]
-    },
-    {
-     "name": "stdin",
-     "output_type": "stream",
-     "text": [
-      "🔊 Hear translated voice? (yes/no):  no\n",
-      "🔁 Translate back to English? (yes/no):  no\n",
-      "\n",
-      "📝 Enter text to translate (or 'exit' to quit):  kya hal ha \n",
-      "🎯 Enter target language (e.g., Urdu, Pashto, Saraiki):  Pashto\n"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "🔍 Using 'As' as target language\n",
-      "\n",
-      "➡️ Translation in Pashto:\n",
-      "পৰিস্থিতি কি?\n",
-      "\n",
-      "💾 Saved successfully.\n",
-      "\n"
-     ]
-    },
-    {
-     "name": "stdin",
-     "output_type": "stream",
-     "text": [
-      "🔊 Hear translated voice? (yes/no):  no\n",
-      "🔁 Translate back to English? (yes/no):  no\n",
-      "\n",
-      "📝 Enter text to translate (or 'exit' to quit):  exit\n"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "\n",
-      "👋 Goodbye!\n"
-     ]
-    }
-   ],
-   "source": [
-    "from deep_translator import GoogleTranslator\n",
-    "from gtts import gTTS\n",
-    "from playsound import playsound\n",
-    "from datetime import datetime\n",
-    "from fuzzywuzzy import process\n",
-    "import os\n",
-    "\n",
-    "# Supported languages\n",
-    "langs = GoogleTranslator(source='auto', target='en').get_supported_languages(as_dict=True)\n",
-    "name_to_code = {name.lower(): code for code, name in langs.items()}\n",
-    "code_to_name = {code: name for code, name in langs.items()}\n",
-    "\n",
-    "print(\"🌍 Welcome to English ↔ 100+ Languages Translator + Voice\\n\")\n",
-    "print(\"💡 Examples: Urdu, Pashto, Saraiki, Arabic, Hindi, Chinese\")\n",
-    "print(\"💾 Translations auto-saved\\nType 'exit' anytime to quit.\\n\")\n",
-    "\n",
-    "# Save translation history\n",
-    "def save_translation(src_text, src_lang, target_lang, result):\n",
-    "    with open(\"Translator_History.txt\", \"a\", encoding=\"utf-8\") as f:\n",
-    "        f.write(f\"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]\\n\")\n",
-    "        f.write(f\"Source ({src_lang}): {src_text}\\n\")\n",
-    "        f.write(f\"Translated ({target_lang}): {result}\\n\")\n",
-    "        f.write(\"-\"*40 + \"\\n\")\n",
-    "\n",
-    "# Play voice\n",
-    "def speak_text(text, lang_code):\n",
-    "    try:\n",
-    "        tts = gTTS(text=text, lang=lang_code)\n",
-    "        filename = \"temp_voice.mp3\"\n",
-    "        tts.save(filename)\n",
-    "        playsound(filename)\n",
-    "        os.remove(filename)\n",
-    "    except Exception as e:\n",
-    "        print(f\"⚠️ Voice Error: {e}\")\n",
-    "\n",
-    "# Fuzzy match for language names\n",
-    "def get_language_code(user_input):\n",
-    "    user_input = user_input.lower().strip()\n",
-    "    if user_input in name_to_code:\n",
-    "        return name_to_code[user_input]\n",
-    "    best_match, score = process.extractOne(user_input, list(name_to_code.keys()))\n",
-    "    if score > 70:\n",
-    "        print(f\"🔍 Using '{best_match.title()}' as target language\")\n",
-    "        return name_to_code[best_match]\n",
-    "    return None\n",
-    "\n",
-    "while True:\n",
-    "    text = input(\"\\n📝 Enter text to translate (or 'exit' to quit): \")\n",
-    "    if text.lower() == \"exit\":\n",
-    "        print(\"\\n👋 Goodbye!\")\n",
-    "        break\n",
-    "\n",
-    "    target_lang_name = input(\"🎯 Enter target language (e.g., Urdu, Pashto, Saraiki): \")\n",
-    "    if target_lang_name.lower() == \"exit\":\n",
-    "        print(\"\\n👋 Goodbye!\")\n",
-    "        break\n",
-    "\n",
-    "    target_code = get_language_code(target_lang_name)\n",
-    "    if not target_code:\n",
-    "        print(\"⚠️ Unknown language, try again.\\n\")\n",
-    "        continue\n",
-    "\n",
-    "    try:\n",
-    "        # Translate (English ↔ Target)\n",
-    "        translated = GoogleTranslator(source='auto', target=target_code).translate(text)\n",
-    "        print(f\"\\n➡️ Translation in {target_lang_name.title()}:\\n{translated}\\n\")\n",
-    "        save_translation(text, \"Auto-detected\", target_lang_name.title(), translated)\n",
-    "        print(\"💾 Saved successfully.\\n\")\n",
-    "\n",
-    "        speak = input(\"🔊 Hear translated voice? (yes/no): \").lower()\n",
-    "        if speak == \"yes\":\n",
-    "            speak_text(translated, target_code)\n",
-    "\n",
-    "        reverse = input(\"🔁 Translate back to English? (yes/no): \").lower()\n",
-    "        if reverse == \"yes\":\n",
-    "            reverse_text = GoogleTranslator(source=target_code, target='en').translate(translated)\n",
-    "            print(f\"\\n🔁 Back to English:\\n{reverse_text}\\n\")\n",
-    "            save_translation(translated, target_lang_name.title(), \"English\", reverse_text)\n",
-    "\n",
-    "    except Exception as e:\n",
-    "        print(f\"⚠️ Error: {e}\")\n"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "640caa44-937f-41f1-873c-03ac282d821f",
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "🌍 Welcome to English ↔ 100+ Languages Translator + Voice\n",
-      "\n",
-      "💡 Available Languages:\n",
-      "\n",
-      "af (afrikaans)\n",
-      "sq (albanian)\n",
-      "am (amharic)\n",
-      "ar (arabic)\n",
-      "hy (armenian)\n",
-      "as (assamese)\n",
-      "ay (aymara)\n",
-      "az (azerbaijani)\n",
-      "bm (bambara)\n",
-      "eu (basque)\n",
-      "be (belarusian)\n",
-      "bn (bengali)\n",
-      "bho (bhojpuri)\n",
-      "bs (bosnian)\n",
-      "bg (bulgarian)\n",
-      "ca (catalan)\n",
-      "ceb (cebuano)\n",
-      "ny (chichewa)\n",
-      "zh-CN (chinese (simplified))\n",
-      "zh-TW (chinese (traditional))\n",
-      "co (corsican)\n",
-      "hr (croatian)\n",
-      "cs (czech)\n",
-      "da (danish)\n",
-      "dv (dhivehi)\n",
-      "doi (dogri)\n",
-      "nl (dutch)\n",
-      "en (english)\n",
-      "eo (esperanto)\n",
-      "et (estonian)\n",
-      "ee (ewe)\n",
-      "tl (filipino)\n",
-      "fi (finnish)\n",
-      "fr (french)\n",
-      "fy (frisian)\n",
-      "gl (galician)\n",
-      "ka (georgian)\n",
-      "de (german)\n",
-      "el (greek)\n",
-      "gn (guarani)\n",
-      "gu (gujarati)\n",
-      "ht (haitian creole)\n",
-      "ha (hausa)\n",
-      "haw (hawaiian)\n",
-      "iw (hebrew)\n",
-      "hi (hindi)\n",
-      "hmn (hmong)\n",
-      "hu (hungarian)\n",
-      "is (icelandic)\n",
-      "ig (igbo)\n",
-      "ilo (ilocano)\n",
-      "id (indonesian)\n",
-      "ga (irish)\n",
-      "it (italian)\n",
-      "ja (japanese)\n",
-      "jw (javanese)\n",
-      "kn (kannada)\n",
-      "kk (kazakh)\n",
-      "km (khmer)\n",
-      "rw (kinyarwanda)\n",
-      "gom (konkani)\n",
-      "ko (korean)\n",
-      "kri (krio)\n",
-      "ku (kurdish (kurmanji))\n",
-      "ckb (kurdish (sorani))\n",
-      "ky (kyrgyz)\n",
-      "lo (lao)\n",
-      "la (latin)\n",
-      "lv (latvian)\n",
-      "ln (lingala)\n",
-      "lt (lithuanian)\n",
-      "lg (luganda)\n",
-      "lb (luxembourgish)\n",
-      "mk (macedonian)\n",
-      "mai (maithili)\n",
-      "mg (malagasy)\n",
-      "ms (malay)\n",
-      "ml (malayalam)\n",
-      "mt (maltese)\n",
-      "mi (maori)\n",
-      "mr (marathi)\n",
-      "mni-Mtei (meiteilon (manipuri))\n",
-      "lus (mizo)\n",
-      "mn (mongolian)\n",
-      "my (myanmar)\n",
-      "ne (nepali)\n",
-      "no (norwegian)\n",
-      "or (odia (oriya))\n",
-      "om (oromo)\n",
-      "ps (pashto)\n",
-      "fa (persian)\n",
-      "pl (polish)\n",
-      "pt (portuguese)\n",
-      "pa (punjabi)\n",
-      "qu (quechua)\n",
-      "ro (romanian)\n",
-      "ru (russian)\n",
-      "sm (samoan)\n",
-      "sa (sanskrit)\n",
-      "gd (scots gaelic)\n",
-      "nso (sepedi)\n",
-      "sr (serbian)\n",
-      "st (sesotho)\n",
-      "sn (shona)\n",
-      "sd (sindhi)\n",
-      "si (sinhala)\n",
-      "sk (slovak)\n",
-      "sl (slovenian)\n",
-      "so (somali)\n",
-      "es (spanish)\n",
-      "su (sundanese)\n",
-      "sw (swahili)\n",
-      "sv (swedish)\n",
-      "tg (tajik)\n",
-      "ta (tamil)\n",
-      "tt (tatar)\n",
-      "te (telugu)\n",
-      "th (thai)\n",
-      "ti (tigrinya)\n",
-      "ts (tsonga)\n",
-      "tr (turkish)\n",
-      "tk (turkmen)\n",
-      "ak (twi)\n",
-      "uk (ukrainian)\n",
-      "ur (urdu)\n",
-      "ug (uyghur)\n",
-      "uz (uzbek)\n",
-      "vi (vietnamese)\n",
-      "cy (welsh)\n",
-      "xh (xhosa)\n",
-      "yi (yiddish)\n",
-      "yo (yoruba)\n",
-      "zu (zulu)\n",
-      "\n",
-      "💾 Translations auto-saved\n",
-      "Type 'exit' anytime to quit.\n",
-      "\n"
-     ]
-    },
-    {
-     "name": "stdin",
-     "output_type": "stream",
-     "text": [
-      "\n",
-      "📝 Enter text to translate (or 'exit' to quit):  How are you\n",
-      "🎯 Enter target language (choose from above list):  ps\n"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "\n",
-      "➡️ Translation in Ps:\n",
-      "تاسو څنګه یئ\n",
-      "\n",
-      "💾 Saved successfully.\n",
-      "\n"
-     ]
-    },
-    {
-     "name": "stdin",
-     "output_type": "stream",
-     "text": [
-      "🔊 Hear translated voice? (yes/no):  no\n",
-      "🔁 Translate back to English? (yes/no):  no\n",
-      "\n",
-      "📝 Enter text to translate (or 'exit' to quit):  pagal ho tm\n",
-      "🎯 Enter target language (choose from above list):  ur\n"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "\n",
-      "➡️ Translation in Ur:\n",
-      "پاگل ہو ٹی ایم\n",
-      "\n",
-      "💾 Saved successfully.\n",
-      "\n"
-     ]
-    }
-   ],
-   "source": [
-    "from deep_translator import GoogleTranslator\n",
-    "from gtts import gTTS\n",
-    "from playsound import playsound\n",
-    "from datetime import datetime\n",
-    "from fuzzywuzzy import process\n",
-    "import os\n",
-    "\n",
-    "# Supported languages\n",
-    "langs = GoogleTranslator(source='auto', target='en').get_supported_languages(as_dict=True)\n",
-    "name_to_code = {name.lower(): code for code, name in langs.items()}\n",
-    "code_to_name = {code: name for code, name in langs.items()}\n",
-    "\n",
-    "print(\"🌍 Welcome to English ↔ 100+ Languages Translator + Voice\\n\")\n",
-    "print(\"💡 Available Languages:\\n\")\n",
-    "\n",
-    "# Show all languages for user\n",
-    "for code, name in langs.items():\n",
-    "    print(f\"{name} ({code})\")\n",
-    "print(\"\\n💾 Translations auto-saved\\nType 'exit' anytime to quit.\\n\")\n",
-    "\n",
-    "# Save translation history\n",
-    "def save_translation(src_text, src_lang, target_lang, result):\n",
-    "    with open(\"Translator_History.txt\", \"a\", encoding=\"utf-8\") as f:\n",
-    "        f.write(f\"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]\\n\")\n",
-    "        f.write(f\"Source ({src_lang}): {src_text}\\n\")\n",
-    "        f.write(f\"Translated ({target_lang}): {result}\\n\")\n",
-    "        f.write(\"-\"*40 + \"\\n\")\n",
-    "\n",
-    "# Play voice\n",
-    "def speak_text(text, lang_code):\n",
-    "    try:\n",
-    "        tts = gTTS(text=text, lang=lang_code)\n",
-    "        filename = \"temp_voice.mp3\"\n",
-    "        tts.save(filename)\n",
-    "        playsound(filename)\n",
-    "        os.remove(filename)\n",
-    "    except Exception as e:\n",
-    "        print(f\"⚠️ Voice Error: {e}\")\n",
-    "\n",
-    "# Fuzzy matching for language selection\n",
-    "def get_language_code(user_input):\n",
-    "    user_input = user_input.lower().strip()\n",
-    "    if user_input in name_to_code:\n",
-    "        return name_to_code[user_input]\n",
-    "    best_match, score = process.extractOne(user_input, list(name_to_code.keys()))\n",
-    "    if score >= 90:\n",
-    "        print(f\"🔍 Using '{best_match.title()}' as target language\")\n",
-    "        return name_to_code[best_match]\n",
-    "    print(\"⚠️ Language not found or ambiguous, please try again.\")\n",
-    "    return None\n",
-    "\n",
-    "# Main loop\n",
-    "while True:\n",
-    "    text = input(\"\\n📝 Enter text to translate (or 'exit' to quit): \")\n",
-    "    if text.lower() == \"exit\":\n",
-    "        print(\"\\n👋 Goodbye!\")\n",
-    "        break\n",
-    "\n",
-    "    target_lang_name = input(\"🎯 Enter target language (choose from above list): \")\n",
-    "    if target_lang_name.lower() == \"exit\":\n",
-    "        print(\"\\n👋 Goodbye!\")\n",
-    "        break\n",
-    "\n",
-    "    target_code = get_language_code(target_lang_name)\n",
-    "    if not target_code:\n",
-    "        continue\n",
-    "\n",
-    "    try:\n",
-    "        translated = GoogleTranslator(source='auto', target=target_code).translate(text)\n",
-    "        print(f\"\\n➡️ Translation in {target_lang_name.title()}:\\n{translated}\\n\")\n",
-    "        save_translation(text, \"Auto-detected\", target_lang_name.title(), translated)\n",
-    "        print(\"💾 Saved successfully.\\n\")\n",
-    "\n",
-    "        speak = input(\"🔊 Hear translated voice? (yes/no): \").lower()\n",
-    "        if speak == \"yes\":\n",
-    "            speak_text(translated, target_code)\n",
-    "\n",
-    "        reverse = input(\"🔁 Translate back to English? (yes/no): \").lower()\n",
-    "        if reverse == \"yes\":\n",
-    "            reverse_text = GoogleTranslator(source=target_code, target='en').translate(translated)\n",
-    "            print(f\"\\n🔁 Back to English:\\n{reverse_text}\\n\")\n",
-    "            save_translation(translated, target_lang_name.title(), \"English\", reverse_text)\n",
-    "\n",
-    "    except Exception as e:\n",
-    "        print(f\"⚠️ Error: {e}\")\n",
-    "\n"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "31be851b-e76a-4780-9c7f-57e0a906d657",
-   "metadata": {},
-   "outputs": [],
-   "source": []
-  }
- ],
- "metadata": {
-  "kernelspec": {
-   "display_name": "Python 3 (ipykernel)",
-   "language": "python",
-   "name": "python3"
-  },
-  "language_info": {
-   "codemirror_mode": {
-    "name": "ipython",
-    "version": 3
-   },
-   "file_extension": ".py",
-   "mimetype": "text/x-python",
-   "name": "python",
-   "nbconvert_exporter": "python",
-   "pygments_lexer": "ipython3",
-   "version": "3.13.5"
-  }
- },
- "nbformat": 4,
- "nbformat_minor": 5
-}
+import streamlit as st
+from deep_translator import GoogleTranslator
+from gtts import gTTS
+from datetime import datetime
+import tempfile
+import os
+import io
+
+# ---------- Page config ----------
+st.set_page_config(page_title="AI Translator + Voice", layout="wide", page_icon="🌍")
+st.title("🌍 AI Translator + Voice")
+
+# ---------- Load supported languages ----------
+# deep-translator returns a dict mapping code -> language name
+langs_dict = GoogleTranslator(source="auto", target="en").get_supported_languages(as_dict=True)
+# Build lists for dropdown: show "Language (code)" for clarity
+lang_items = [f"{name} ({code})" for code, name in langs_dict.items()]
+# Keep mapping from displayed string to code and readable name
+display_to_code = {f"{name} ({code})": code for code, name in langs_dict.items()}
+display_to_name = {f"{name} ({code})": name for code, name in langs_dict.items()}
+
+# ---------- Sidebar: History ----------
+st.sidebar.header("📜 Translation History")
+history_file = "Translator_History.txt"
+if os.path.exists(history_file):
+    with open(history_file, "r", encoding="utf-8") as f:
+        history_text = f.read()
+else:
+    history_text = "No history yet."
+
+st.sidebar.text_area("Saved history", value=history_text, height=300, key="history_area")
+
+def append_history(src_text, src_lang, target_lang, result):
+    line = (
+        f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]\n"
+        f"Source ({src_lang}): {src_text}\n"
+        f"Translated ({target_lang}): {result}\n"
+        + "-"*40 + "\n"
+    )
+    with open(history_file, "a", encoding="utf-8") as f:
+        f.write(line)
+
+# Download history button
+if os.path.exists(history_file):
+    with open(history_file, "rb") as f:
+        st.sidebar.download_button("⬇️ Download history", data=f, file_name="Translator_History.txt")
+
+# ---------- Main UI ----------
+st.markdown("**Type text below, pick a target language, then press Translate.**")
+col1, col2 = st.columns([3,1])
+
+with col1:
+    text = st.text_area("📝 Enter text to translate", height=140, placeholder="Type or paste text here...")
+with col2:
+    st.markdown("🎯 **Target language**")
+    target_display = st.selectbox("Choose language", options=sorted(lang_items), index=sorted(lang_items).index("English (en)") if "English (en)" in lang_items else 0)
+    tts_checkbox = st.checkbox("🔊 Play audio after translation", value=True)
+    translate_btn = st.button("Translate")
+    reverse_btn = st.button("🔁 Reverse translate (to English)")
+
+# Utility: clean code -> name
+def display_to_langcode(display):
+    return display_to_code.get(display)
+
+def display_to_langname(display):
+    return display_to_name.get(display)
+
+# ---------- Translation & TTS ----------
+translated_text = None
+if translate_btn:
+    if not text or not text.strip():
+        st.warning("⚠️ Please enter text to translate.")
+    else:
+        try:
+            target_code = display_to_langcode(target_display)
+            target_name = display_to_langname(target_display)
+            # Use deep-translator (auto source)
+            translated_text = GoogleTranslator(source="auto", target=target_code).translate(text)
+            st.success(f"➡️ **Translation ({target_name}):**")
+            st.write(translated_text)
+            append_history(text, "Auto-detected", target_name, translated_text)
+            # Copy button
+            st.code(translated_text)
+            st.button("Copy translation")  # visual cue (Streamlit has no JS clipboard without components)
+            # Audio (gTTS) - catch unsupported languages
+            if tts_checkbox:
+                try:
+                    # gTTS expects language codes like 'en', 'ur', 'ps', etc.
+                    tts = gTTS(text=translated_text, lang=target_code)
+                    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+                    tts.save(tmp.name)
+                    st.audio(tmp.name, format="audio/mp3")
+                    # remove temp file after usage when app re-runs; leave for server cleanup
+                except Exception as e:
+                    st.warning(f"⚠️ Audio not available for this language (gTTS error): {e}")
+        except Exception as e:
+            st.error(f"❌ Translation error: {e}")
+
+if reverse_btn:
+    if not text or not text.strip():
+        st.warning("⚠️ Please enter text to translate first (reverse translates from a translated result).")
+    else:
+        try:
+            target_code = display_to_langcode(target_display)
+            # Translate to target then back to English
+            translated_temp = GoogleTranslator(source="auto", target=target_code).translate(text)
+            reverse_text = GoogleTranslator(source=target_code, target="en").translate(translated_temp)
+            st.info("🔁 **Back to English:**")
+            st.write(reverse_text)
+            append_history(translated_temp, display_to_langname(target_display), "English", reverse_text)
+            if tts_checkbox:
+                try:
+                    tts = gTTS(text=reverse_text, lang="en")
+                    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+                    tts.save(tmp.name)
+                    st.audio(tmp.name, format="audio/mp3")
+                except Exception as e:
+                    st.warning(f"⚠️ Audio not available for English (gTTS error): {e}")
+        except Exception as e:
+            st.error(f"❌ Reverse translation error: {e}")
+
+# ---------- Helpful tips and footer ----------
+st.markdown("---")
+st.markdown(
+    "**Tips:**\n"
+    "- If audio fails for a particular language, uncheck the 'Play audio' box or choose another language.\n"
+    "- The app uses Deep Translator (Google) — internet is required for translation and TTS.\n"
+)
+st.caption("Built with ❤️ — Streamlit + deep-translator + gTTS")
+
+# cleanup: optional (do not delete history)
