@@ -1,7 +1,0 @@
-streamlit
-deep-translator
-gTTS
-playsound==1.2.2
-fuzzywuzzy
-python-Levenshtein
-
