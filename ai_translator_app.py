@@ -24,11 +24,18 @@ users = load_users()
 # -----------------------------
 # App Layout + SEO
 # -----------------------------
-st.set_page_config(
+st.set_page_configst.set_page_config(
     page_title="🌍 Free AI Translator | 100+ Languages",
     page_icon="🌍",
     layout="centered"
 )
+
+# ✅ Google Search Console verification
+st.markdown(
+    '<meta name="google-site-verification" content="ABC123XYZ456"/>',
+    unsafe_allow_html=True
+)
+
 
 st.title("🌍 Free AI Translator by Ashii")
 st.write("Translate between 100+ languages with **voice output**, **login system**, and **translation history** — totally free!")
