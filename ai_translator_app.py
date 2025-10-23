@@ -32,7 +32,7 @@ st.set_page_configst.set_page_config(
 
 # ✅ Google Search Console verification
 st.markdown(
-    '<meta name="google-site-verification" content="d1f2g3h4i5j6k7l8m9n0"/>',
+    '<meta name="google-site-verification" content="b-bDvxfynMyfgJWMhFuHNkODVfLkQm466fyWNSQXTBE"/>',
     unsafe_allow_html=True
 )
 
@@ -157,4 +157,5 @@ if st.button("🚪 Logout"):
     st.session_state.logged_in = False
     st.session_state.username = ""
     st.rerun()
+
 
