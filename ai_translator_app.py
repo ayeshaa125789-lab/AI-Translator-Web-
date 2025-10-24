@@ -3,7 +3,7 @@ from deep_translator import GoogleTranslator
 from gtts import gTTS
 import os, json
 from datetime import datetime
-import streamlit.components.v1 as components  # for safe HTML/meta tag
+import streamlit.components.v1 as components  # for meta tag injection
 
 # -----------------------------
 # User System (Login / Signup)
@@ -23,7 +23,7 @@ def save_users(users):
 users = load_users()
 
 # -----------------------------
-# Page Config + SEO + Google Verification
+# Page Config + Google Verification + SEO
 # -----------------------------
 st.set_page_config(
     page_title="🌍 Free AI Translator | 100+ Languages",
@@ -31,18 +31,26 @@ st.set_page_config(
     layout="centered"
 )
 
-# Google Search Console Verification Meta Tag (Safe)
+# ✅ Google Search Console Verification Tag
 components.html(
     '<meta name="google-site-verification" content="b-bDvxfynMyfgJWMhFuHNkODVfLkQm466fyWNSQXTBE" />',
     height=0
 )
 
+# ✅ SEO Meta Description (for ranking)
+components.html("""
+<meta name="description" content="Free AI Translator – Translate text in 100+ languages with voice, login, and history features. Built by Aisha with Deep Translator and gTTS.">
+<meta name="keywords" content="AI Translator, Free Translator, Urdu English Translator, Multilingual Translator, Voice Translator, Streamlit App, Translate Online">
+""", height=0)
+
+# -----------------------------
 # App Title
+# -----------------------------
 st.title("🌍 Free AI Translator by Ashii")
 st.write("Translate between 100+ languages with **voice output**, **login system**, and **translation history** — totally free!")
 
 # -----------------------------
-# Login / Signup
+# Login / Signup Section
 # -----------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
