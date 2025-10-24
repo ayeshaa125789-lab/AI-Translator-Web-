@@ -40,7 +40,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# ✅ Title updated (removed “by Aisha”)
+# ✅ Updated Title
 st.title("🌍 AI Translator")
 st.write("Translate between 100+ languages with **voice**, **login**, and **history** — all free!")
 
@@ -168,3 +168,18 @@ if st.button("🚪 Logout"):
     st.session_state.logged_in = False
     st.session_state.username = ""
     st.rerun()
+
+# -----------------------------
+# 📜 View Translation History
+# -----------------------------
+st.markdown("---")
+if os.path.exists("Translator_History.txt"):
+    if st.button("📜 View Translation History"):
+        with open("Translator_History.txt", "r", encoding="utf-8") as f:
+            history_data = f.read()
+            if history_data.strip() == "":
+                st.info("No translations saved yet.")
+            else:
+                st.text_area("Your Translation History:", history_data, height=300)
+else:
+    st.info("No translation history file found yet.")
