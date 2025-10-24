@@ -3,7 +3,16 @@ from deep_translator import GoogleTranslator
 from gtts import gTTS
 import os, json
 from datetime import datetime
-import streamlit.components.v1 as components  # for meta tag injection
+import pathlib
+import streamlit.components.v1 as components
+
+# -----------------------------------
+# Google Search Console Verification
+# -----------------------------------
+file_path = pathlib.Path("google12d876c8a49b491f.html")
+if file_path.exists():
+    with open(file_path, "r") as f:
+        st.markdown(f.read(), unsafe_allow_html=True)
 
 # -----------------------------
 # User System (Login / Signup)
@@ -23,34 +32,19 @@ def save_users(users):
 users = load_users()
 
 # -----------------------------
-# Page Config + Google Verification + SEO
+# Page Config + SEO
 # -----------------------------
 st.set_page_config(
-    page_title="🌍 Free AI Translator | 100+ Languages",
+    page_title="🌍 AI Translator | Free 100+ Languages",
     page_icon="🌍",
     layout="centered"
 )
 
-# ✅ Google Search Console Verification Tag
-components.html(
-    '<meta name="google-site-verification" content="b-bDvxfynMyfgJWMhFuHNkODVfLkQm466fyWNSQXTBE" />',
-    height=0
-)
-
-# ✅ SEO Meta Description (for ranking)
-components.html("""
-<meta name="description" content="Free AI Translator – Translate text in 100+ languages with voice, login, and history features. Built by Aisha with Deep Translator and gTTS.">
-<meta name="keywords" content="AI Translator, Free Translator, Urdu English Translator, Multilingual Translator, Voice Translator, Streamlit App, Translate Online">
-""", height=0)
+st.title("🌍 AI Translator by Aisha")
+st.write("Translate between 100+ languages with **voice**, **login**, and **history** — all free!")
 
 # -----------------------------
-# App Title
-# -----------------------------
-st.title("🌍 Free AI Translator by Ashii")
-st.write("Translate between 100+ languages with **voice output**, **login system**, and **translation history** — totally free!")
-
-# -----------------------------
-# Login / Signup Section
+# Login / Signup
 # -----------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -106,7 +100,6 @@ if not st.session_state.logged_in:
 try:
     langs_dict = GoogleTranslator(source='auto', target='en').get_supported_languages(as_dict=True)
     name_to_code = {v.lower(): k for k, v in langs_dict.items()}
-    # Format language names: "ur (Urdu)" style
     sorted_langs = [f"{k} ({v})" for k, v in sorted(name_to_code.items())]
 except Exception:
     st.error("⚠️ Unable to load languages. Check your internet connection.")
@@ -118,14 +111,12 @@ st.markdown("---")
 st.subheader("📝 Enter text to translate:")
 text = st.text_area("Type or paste text here", height=100)
 
-# Language selection with full name
 target_lang = st.selectbox(
     "🎯 Choose target language:",
     sorted_langs,
     index=sorted_langs.index("english (English)") if "english (English)" in sorted_langs else 0
 )
 
-# Extract code from "ur (Urdu)" style
 target_code = target_lang.split(" ")[0]
 
 # -----------------------------
@@ -147,7 +138,6 @@ if st.button("🌐 Translate"):
             st.text_area("🈸 Translated text:", translated, height=100)
             save_translation(text, target_lang, translated)
 
-            # Voice Output
             try:
                 tts = gTTS(text=translated, lang=target_code)
                 tts.save("voice.mp3")
