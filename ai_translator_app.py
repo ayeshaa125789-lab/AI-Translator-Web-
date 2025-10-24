@@ -40,7 +40,8 @@ st.set_page_config(
     layout="centered"
 )
 
-st.title("🌍 AI Translator by Aisha")
+# ✅ Title updated (removed “by Aisha”)
+st.title("🌍 AI Translator")
 st.write("Translate between 100+ languages with **voice**, **login**, and **history** — all free!")
 
 # -----------------------------
@@ -138,13 +139,23 @@ if st.button("🌐 Translate"):
             st.text_area("🈸 Translated text:", translated, height=100)
             save_translation(text, target_lang, translated)
 
+            # ✅ Updated Voice System (safe + fallback)
             try:
                 tts = gTTS(text=translated, lang=target_code)
                 tts.save("voice.mp3")
                 st.audio("voice.mp3", format="audio/mp3")
                 os.remove("voice.mp3")
             except Exception:
-                st.warning("🔇 Voice not available for this language.")
+                try:
+                    # Fallback to English voice
+                    tts = gTTS(text=translated, lang="en")
+                    tts.save("voice.mp3")
+                    st.audio("voice.mp3", format="audio/mp3")
+                    os.remove("voice.mp3")
+                    st.warning("🔇 Voice not available for this language. Playing English voice instead.")
+                except:
+                    st.warning("🔇 Voice not available for this language.")
+
         except Exception as e:
             st.error(f"❌ Translation Error: {e}")
     else:
