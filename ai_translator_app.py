@@ -26,7 +26,7 @@ users = load_users()
 # -----------------------------
 st.set_page_config(page_title="🌍 AI Translator", page_icon="🌍", layout="centered")
 st.title("🌍 AI Translator by Aisha")
-st.write("Translate between **100+ supported languages**, with login, voice, and translation history — all free!")
+st.write("Translate between **200+ supported languages**, with login, voice, and translation history — all free!")
 
 # -----------------------------
 # Login State
@@ -93,10 +93,11 @@ if not st.session_state.logged_in:
     st.stop()
 
 # -----------------------------
-# Supported Languages (Real Google List)
+# Supported Languages (Full Names)
 # -----------------------------
 SUPPORTED_LANGS = GoogleTranslator().get_supported_languages(as_dict=True)
-LANG_NAMES = sorted(list(SUPPORTED_LANGS.keys()))
+LANG_MAP = {v: k for k, v in SUPPORTED_LANGS.items()}
+LANG_NAMES = sorted(list(LANG_MAP.keys()))
 
 # -----------------------------
 # Translator Section
@@ -110,16 +111,23 @@ text = st.text_area("Type or paste your text here:", height=100)
 target_lang = st.selectbox(
     "🎯 Choose target language:",
     LANG_NAMES,
-    index=LANG_NAMES.index("english") if "english" in LANG_NAMES else 0
+    index=LANG_NAMES.index("English") if "English" in LANG_NAMES else 0
 )
-target_code = SUPPORTED_LANGS[target_lang]
+target_code = LANG_MAP[target_lang]
 
 # -----------------------------
-# Translation Function
+# Smart Translation
 # -----------------------------
 def translate_text(txt, target):
     try:
-        translated = GoogleTranslator(source='auto', target=target).translate(txt)
+        # Roman Urdu detection fix
+        if target == "ur" and all(ch.isascii() for ch in txt):
+            translated = GoogleTranslator(source='en', target='ur').translate(txt)
+        # Roman Urdu to English (reverse fix)
+        elif target == "en" and any(word in txt.lower() for word in ["tum", "mujhe", "mera", "kyu", "kyun", "kaise", "nahi"]):
+            translated = GoogleTranslator(source='ur', target='en').translate(txt)
+        else:
+            translated = GoogleTranslator(source='auto', target=target).translate(txt)
         return translated
     except Exception as e:
         st.error(f"Translation Error: {e}")
