@@ -24,52 +24,67 @@ users = load_users()
 # -----------------------------
 # Streamlit Config
 # -----------------------------
-st.set_page_config(page_title="🌍 AI Translator by Aisha", page_icon="🌍", layout="centered")
+st.set_page_config(page_title="🌍 AI Translator", page_icon="🌍", layout="centered")
 st.title("🌍 AI Translator by Aisha")
-st.write("Translate between **200+ languages** with login, voice and translation history — free and easy!")
+st.write("Translate between **100+ supported languages**, with login, voice, and translation history — all free!")
 
 # -----------------------------
-# Login / Signup
+# Login State
 # -----------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
     st.session_state.username = ""
 
+# -----------------------------
+# Signup + Auto Login
+# -----------------------------
 def signup_page():
     st.subheader("🆕 Create Account")
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
+
     if st.button("Sign Up"):
         if username in users:
-            st.warning("⚠️ Username already exists.")
+            st.warning("⚠️ Username already exists. Try Login.")
         elif username.strip() == "" or password.strip() == "":
             st.warning("⚠️ Enter valid details.")
         else:
             users[username] = password
             save_users(users)
-            st.success("✅ Signup successful! Please log in.")
+            st.success("✅ Account created successfully! Logging you in...")
+            st.session_state.logged_in = True
+            st.session_state.username = username
             st.session_state["signup_mode"] = False
+            st.rerun()
 
+# -----------------------------
+# Login Page
+# -----------------------------
 def login_page():
     st.subheader("🔐 Login to Continue")
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
+
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Login"):
             if username in users and users[username] == password:
                 st.session_state.logged_in = True
                 st.session_state.username = username
-                st.success(f"✅ Welcome {username}!")
+                st.success(f"✅ Welcome back, {username}!")
                 st.rerun()
             else:
                 st.error("❌ Invalid username or password.")
+
     with col2:
         if st.button("Create Account"):
             st.session_state["signup_mode"] = True
             st.rerun()
 
+# -----------------------------
+# Authentication Control
+# -----------------------------
 if not st.session_state.logged_in:
     if st.session_state.get("signup_mode"):
         signup_page()
@@ -78,24 +93,10 @@ if not st.session_state.logged_in:
     st.stop()
 
 # -----------------------------
-# 200+ Supported Languages
+# Supported Languages (Real Google List)
 # -----------------------------
-ALL_LANGS = sorted([
-    "english","urdu","hindi","chinese","japanese","korean","spanish","french","german",
-    "italian","portuguese","russian","arabic","turkish","dutch","swedish","norwegian",
-    "danish","finnish","polish","greek","czech","hungarian","romanian","bulgarian",
-    "ukrainian","croatian","serbian","slovak","estonian","latvian","lithuanian",
-    "thai","vietnamese","indonesian","malay","filipino","tamil","telugu","kannada",
-    "malayalam","bengali","punjabi","sindhi","persian","pashto","hebrew","swahili",
-    "afrikaans","zulu","amharic","hausa","yoruba","nepali","burmese","khmer","lao",
-    "icelandic","irish","maltese","albanian","armenian","azerbaijani","georgian",
-    "kazakh","uzbek","tajik","turkmen","somali","bosnian","macedonian","catalan",
-    "galician","valencian","corsican","esperanto","latin","scots gaelic","sinhala",
-    "tajik cyrillic","chinese simplified","chinese traditional","chinese hong kong",
-    "english uk","english us","english india","english pakistan","urdu roman","punjabi roman",
-    "hindi roman","arabic egypt","arabic saudi","french canada","spanish mexico",
-    "portuguese brazil","persian dari","kurdish sorani","kurdish kurmanji"
-] * 3)  # ×3 ensures 200+ total entries
+SUPPORTED_LANGS = GoogleTranslator().get_supported_languages(as_dict=True)
+LANG_NAMES = sorted(list(SUPPORTED_LANGS.keys()))
 
 # -----------------------------
 # Translator Section
@@ -106,8 +107,12 @@ st.subheader("📝 Enter text to translate:")
 
 text = st.text_area("Type or paste your text here:", height=100)
 
-# ✅ Searchable dropdown (200+ languages)
-target_lang = st.selectbox("🎯 Choose target language", ALL_LANGS, index=0, key="lang_select")
+target_lang = st.selectbox(
+    "🎯 Choose target language:",
+    LANG_NAMES,
+    index=LANG_NAMES.index("english") if "english" in LANG_NAMES else 0
+)
+target_code = SUPPORTED_LANGS[target_lang]
 
 # -----------------------------
 # Translation Function
@@ -125,7 +130,7 @@ def translate_text(txt, target):
 # -----------------------------
 def save_history(user, src_text, target, result):
     with open("translation_history.txt", "a", encoding="utf-8") as f:
-        f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {user}\n")
+        f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ({user})\n")
         f.write(f"From: {src_text}\nTo ({target}): {result}\n")
         f.write("-"*50 + "\n")
 
@@ -134,12 +139,12 @@ def save_history(user, src_text, target, result):
 # -----------------------------
 if st.button("🌐 Translate"):
     if text.strip():
-        translated = translate_text(text, target_lang)
+        translated = translate_text(text, target_code)
         if translated:
             st.text_area("🈸 Translated text:", translated, height=100)
             save_history(st.session_state.username, text, target_lang, translated)
             try:
-                tts = gTTS(text=translated, lang=target_lang)
+                tts = gTTS(text=translated, lang=target_code)
                 tts.save("voice.mp3")
                 st.audio("voice.mp3", format="audio/mp3")
                 os.remove("voice.mp3")
