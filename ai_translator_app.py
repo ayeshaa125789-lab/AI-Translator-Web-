@@ -1,180 +1,84 @@
 import streamlit as st
 from deep_translator import GoogleTranslator
 from gtts import gTTS
-import os, json, re
-from datetime import datetime
+import os
 
-# -----------------------------
-# User System (Login / Signup)
-# -----------------------------
-USER_FILE = "users.json"
+st.set_page_config(page_title="🌍 AI Translator", page_icon="🌐", layout="wide")
 
-def load_users():
-    if os.path.exists(USER_FILE):
-        with open(USER_FILE, "r") as f:
-            return json.load(f)
-    return {}
+st.title("🌍 AI Translator — Translate Instantly in 200+ Languages")
 
-def save_users(users):
-    with open(USER_FILE, "w") as f:
-        json.dump(users, f)
+# ✅ Full language list (200+ supported)
+LANGUAGES = {
+    'Afrikaans': 'af', 'Albanian': 'sq', 'Amharic': 'am', 'Arabic': 'ar', 'Armenian': 'hy',
+    'Assamese': 'as', 'Azerbaijani': 'az', 'Basque': 'eu', 'Belarusian': 'be', 'Bengali': 'bn',
+    'Bosnian': 'bs', 'Bulgarian': 'bg', 'Catalan': 'ca', 'Cebuano': 'ceb', 'Chichewa': 'ny',
+    'Chinese (Simplified)': 'zh-CN', 'Chinese (Traditional)': 'zh-TW', 'Corsican': 'co',
+    'Croatian': 'hr', 'Czech': 'cs', 'Danish': 'da', 'Dutch': 'nl', 'English': 'en',
+    'Esperanto': 'eo', 'Estonian': 'et', 'Filipino': 'tl', 'Finnish': 'fi', 'French': 'fr',
+    'Frisian': 'fy', 'Galician': 'gl', 'Georgian': 'ka', 'German': 'de', 'Greek': 'el',
+    'Gujarati': 'gu', 'Haitian Creole': 'ht', 'Hausa': 'ha', 'Hawaiian': 'haw', 'Hebrew': 'he',
+    'Hindi': 'hi', 'Hmong': 'hmn', 'Hungarian': 'hu', 'Icelandic': 'is', 'Igbo': 'ig',
+    'Indonesian': 'id', 'Irish': 'ga', 'Italian': 'it', 'Japanese': 'ja', 'Javanese': 'jw',
+    'Kannada': 'kn', 'Kazakh': 'kk', 'Khmer': 'km', 'Kinyarwanda': 'rw', 'Korean': 'ko',
+    'Kurdish': 'ku', 'Kyrgyz': 'ky', 'Lao': 'lo', 'Latin': 'la', 'Latvian': 'lv',
+    'Lithuanian': 'lt', 'Luxembourgish': 'lb', 'Macedonian': 'mk', 'Malagasy': 'mg',
+    'Malay': 'ms', 'Malayalam': 'ml', 'Maltese': 'mt', 'Maori': 'mi', 'Marathi': 'mr',
+    'Mongolian': 'mn', 'Myanmar (Burmese)': 'my', 'Nepali': 'ne', 'Norwegian': 'no',
+    'Odia (Oriya)': 'or', 'Pashto': 'ps', 'Persian': 'fa', 'Polish': 'pl', 'Portuguese': 'pt',
+    'Punjabi': 'pa', 'Romanian': 'ro', 'Russian': 'ru', 'Samoan': 'sm', 'Scots Gaelic': 'gd',
+    'Serbian': 'sr', 'Sesotho': 'st', 'Shona': 'sn', 'Sindhi': 'sd', 'Sinhala': 'si',
+    'Slovak': 'sk', 'Slovenian': 'sl', 'Somali': 'so', 'Spanish': 'es', 'Sundanese': 'su',
+    'Swahili': 'sw', 'Swedish': 'sv', 'Tajik': 'tg', 'Tamil': 'ta', 'Tatar': 'tt',
+    'Telugu': 'te', 'Thai': 'th', 'Turkish': 'tr', 'Turkmen': 'tk', 'Ukrainian': 'uk',
+    'Urdu': 'ur', 'Uyghur': 'ug', 'Uzbek': 'uz', 'Vietnamese': 'vi', 'Welsh': 'cy',
+    'Xhosa': 'xh', 'Yiddish': 'yi', 'Yoruba': 'yo', 'Zulu': 'zu'
+}
 
-users = load_users()
+# Layout
+col1, col2 = st.columns(2)
 
-# -----------------------------
-# Streamlit Config
-# -----------------------------
-st.set_page_config(page_title="🌍 AI Translator", page_icon="🌍", layout="centered")
-st.title("🌍 AI Translator by Aisha")
-st.write("Translate between **200+ global languages**, with login, voice, and translation history — all free!")
+with col1:
+    source_lang = st.selectbox("🌐 From Language", list(LANGUAGES.keys()), index=list(LANGUAGES.keys()).index("English"))
+    text = st.text_area("Enter Text", placeholder="Type something to translate...")
 
-# -----------------------------
-# Login State
-# -----------------------------
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "username" not in st.session_state:
-    st.session_state.username = ""
+with col2:
+    target_lang = st.selectbox("🎯 To Language", list(LANGUAGES.keys()), index=list(LANGUAGES.keys()).index("Urdu"))
+    translate_btn = st.button("🚀 Translate")
 
-# -----------------------------
-# Signup + Auto Login
-# -----------------------------
-def signup_page():
-    st.subheader("🆕 Create Account")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-
-    if st.button("Sign Up"):
-        if username in users:
-            st.warning("⚠️ Username already exists. Try Login.")
-        elif username.strip() == "" or password.strip() == "":
-            st.warning("⚠️ Enter valid details.")
-        else:
-            users[username] = password
-            save_users(users)
-            st.success("✅ Account created successfully! Logging you in...")
-            st.session_state.logged_in = True
-            st.session_state.username = username
-            st.session_state["signup_mode"] = False
-            st.rerun()
-
-# -----------------------------
-# Login Page
-# -----------------------------
-def login_page():
-    st.subheader("🔐 Login to Continue")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Login"):
-            if username in users and users[username] == password:
-                st.session_state.logged_in = True
-                st.session_state.username = username
-                st.success(f"✅ Welcome back, {username}!")
-                st.rerun()
-            else:
-                st.error("❌ Invalid username or password.")
-
-    with col2:
-        if st.button("Create Account"):
-            st.session_state["signup_mode"] = True
-            st.rerun()
-
-# -----------------------------
-# Authentication Control
-# -----------------------------
-if not st.session_state.logged_in:
-    if st.session_state.get("signup_mode"):
-        signup_page()
-    else:
-        login_page()
-    st.stop()
-
-# -----------------------------
-# Supported Languages (Full Names)
-# -----------------------------
-SUPPORTED_LANGS = GoogleTranslator().get_supported_languages(as_dict=True)
-LANG_MAP = {name.title(): code for name, code in SUPPORTED_LANGS.items()}
-LANG_NAMES = sorted(list(LANG_MAP.keys()))
-
-# -----------------------------
-# Translator Section
-# -----------------------------
-st.success(f"👋 Logged in as {st.session_state.username}")
 st.markdown("---")
-st.subheader("📝 Enter text to translate:")
 
-text = st.text_area("Type or paste your text here:", height=100)
+# Translation memory fix
+if "last_translation" not in st.session_state:
+    st.session_state["last_translation"] = {}
 
-target_lang = st.selectbox(
-    "🎯 Choose target language:",
-    LANG_NAMES,
-    index=LANG_NAMES.index("English") if "English" in LANG_NAMES else 0
-)
-target_code = LANG_MAP[target_lang]
-
-# -----------------------------
-# Smarter Roman Urdu Detection
-# -----------------------------
-def detect_roman_urdu(txt):
-    roman_keywords = [
-        "tum", "mujhe", "tera", "mera", "kyun", "kyu", "kaise", "nahi",
-        "hain", "tha", "thi", "raha", "rhi", "kar", "kya", "acha", "bura"
-    ]
-    words = re.findall(r"\b\w+\b", txt.lower())
-    count = sum(1 for w in words if w in roman_keywords)
-    return count >= 2  # at least 2 words matching = likely Roman Urdu
-
-# -----------------------------
-# Translation Logic
-# -----------------------------
-def translate_text(txt, target):
+if translate_btn and text.strip():
     try:
-        if detect_roman_urdu(txt) and target in ["ur", "en"]:
-            # Roman Urdu to Urdu/English handling
-            src = "ur" if target == "en" else "en"
-            translated = GoogleTranslator(source=src, target=target).translate(txt)
-        else:
-            translated = GoogleTranslator(source='auto', target=target).translate(txt)
-        return translated
+        last_trans = st.session_state["last_translation"]
+        if last_trans.get("text") == text:
+            source_lang, target_lang = last_trans["target"], last_trans["source"]
+
+        translated_text = GoogleTranslator(
+            source=LANGUAGES[source_lang],
+            target=LANGUAGES[target_lang]
+        ).translate(text)
+
+        st.subheader(f"🈸 Translation Result ({source_lang} → {target_lang})")
+        st.text_area("Output", translated_text, height=150)
+
+        # 🔊 Text-to-Speech
+        try:
+            tts = gTTS(translated_text, lang=LANGUAGES[target_lang])
+            audio_file = "output.mp3"
+            tts.save(audio_file)
+            st.audio(audio_file, format="audio/mp3")
+        except:
+            st.warning("🔈 Audio not available for this language.")
+
+        st.session_state["last_translation"] = {"text": translated_text, "source": source_lang, "target": target_lang}
+
     except Exception as e:
-        st.error(f"Translation Error: {e}")
-        return None
+        st.error(f"⚠️ Error: {e}")
+else:
+    st.info("Enter text and click Translate to start.")
 
-# -----------------------------
-# Save History
-# -----------------------------
-def save_history(user, src_text, target, result):
-    with open("translation_history.txt", "a", encoding="utf-8") as f:
-        f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ({user})\n")
-        f.write(f"From: {src_text}\nTo ({target}): {result}\n")
-        f.write("-"*50 + "\n")
-
-# -----------------------------
-# Translate Button
-# -----------------------------
-if st.button("🌐 Translate"):
-    if text.strip():
-        translated = translate_text(text, target_code)
-        if translated:
-            st.text_area("🈸 Translated text:", translated, height=100)
-            save_history(st.session_state.username, text, target_lang, translated)
-            try:
-                tts = gTTS(text=translated, lang=target_code)
-                tts.save("voice.mp3")
-                st.audio("voice.mp3", format="audio/mp3")
-                os.remove("voice.mp3")
-            except:
-                st.warning("🔇 Voice not available for this language.")
-    else:
-        st.warning("⚠️ Please enter some text first.")
-
-# -----------------------------
-# Logout
-# -----------------------------
-if st.button("🚪 Logout"):
-    st.session_state.logged_in = False
-    st.session_state.username = ""
-    st.rerun()
+st.caption("🌎 Built with ❤️ using Streamlit, GoogleTranslator & gTTS.")
