@@ -1,7 +1,7 @@
 import streamlit as st
 from deep_translator import GoogleTranslator
 from gtts import gTTS
-import os, json
+import os, json, re
 from datetime import datetime
 
 # -----------------------------
@@ -26,7 +26,7 @@ users = load_users()
 # -----------------------------
 st.set_page_config(page_title="🌍 AI Translator", page_icon="🌍", layout="centered")
 st.title("🌍 AI Translator by Aisha")
-st.write("Translate between **200+ supported languages**, with login, voice, and translation history — all free!")
+st.write("Translate between **200+ global languages**, with login, voice, and translation history — all free!")
 
 # -----------------------------
 # Login State
@@ -96,7 +96,7 @@ if not st.session_state.logged_in:
 # Supported Languages (Full Names)
 # -----------------------------
 SUPPORTED_LANGS = GoogleTranslator().get_supported_languages(as_dict=True)
-LANG_MAP = {v: k for k, v in SUPPORTED_LANGS.items()}
+LANG_MAP = {name.title(): code for name, code in SUPPORTED_LANGS.items()}
 LANG_NAMES = sorted(list(LANG_MAP.keys()))
 
 # -----------------------------
@@ -116,16 +116,26 @@ target_lang = st.selectbox(
 target_code = LANG_MAP[target_lang]
 
 # -----------------------------
-# Smart Translation
+# Smarter Roman Urdu Detection
+# -----------------------------
+def detect_roman_urdu(txt):
+    roman_keywords = [
+        "tum", "mujhe", "tera", "mera", "kyun", "kyu", "kaise", "nahi",
+        "hain", "tha", "thi", "raha", "rhi", "kar", "kya", "acha", "bura"
+    ]
+    words = re.findall(r"\b\w+\b", txt.lower())
+    count = sum(1 for w in words if w in roman_keywords)
+    return count >= 2  # at least 2 words matching = likely Roman Urdu
+
+# -----------------------------
+# Translation Logic
 # -----------------------------
 def translate_text(txt, target):
     try:
-        # Roman Urdu detection fix
-        if target == "ur" and all(ch.isascii() for ch in txt):
-            translated = GoogleTranslator(source='en', target='ur').translate(txt)
-        # Roman Urdu to English (reverse fix)
-        elif target == "en" and any(word in txt.lower() for word in ["tum", "mujhe", "mera", "kyu", "kyun", "kaise", "nahi"]):
-            translated = GoogleTranslator(source='ur', target='en').translate(txt)
+        if detect_roman_urdu(txt) and target in ["ur", "en"]:
+            # Roman Urdu to Urdu/English handling
+            src = "ur" if target == "en" else "en"
+            translated = GoogleTranslator(source=src, target=target).translate(txt)
         else:
             translated = GoogleTranslator(source='auto', target=target).translate(txt)
         return translated
