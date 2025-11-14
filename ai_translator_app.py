@@ -89,7 +89,8 @@ def auth_ui():
             if username in users_db and users_db[username]["password"] == password:
                 st.session_state.user = username
                 st.success(f"Welcome back, {username}!")
-                st.experimental_rerun()
+                st.stop()
+                st.rerun()
             else:
                 st.error("Invalid username or password.")
 
@@ -104,7 +105,6 @@ def auth_ui():
             elif new_user in users_db:
                 st.warning("Username already exists.")
             else:
-                # Save new user
                 users_db[new_user] = {"password": new_pass}
                 users_data["users"] = users_db
                 save_json_safe(USERS_FILE, users_data)
@@ -112,7 +112,8 @@ def auth_ui():
                 # AUTO LOGIN
                 st.session_state.user = new_user
                 st.success(f"Account created! Welcome, {new_user}! 🎉")
-                st.experimental_rerun()
+                st.stop()
+                st.rerun()
 
     if st.session_state.user is None:
         st.stop()
@@ -127,7 +128,8 @@ else:
     st.sidebar.write(f"👋 Logged in as **{st.session_state.user}**")
     if st.sidebar.button("🚪 Logout"):
         st.session_state.user = None
-        st.experimental_rerun()
+        st.stop()
+        st.rerun()
 
     st.title("🌍 AI Translator — Translate Instantly")
 
@@ -192,7 +194,7 @@ else:
             for h in reversed(user_history[-10:]):
                 st.markdown(f"**🕒 {h['time']} | {h['from']} → {h['to']}**")
                 st.write(f"**Input:** {h['text']}")
-                st.write(f"**Output:** {h['result']}") 
+                st.write(f"**Output:** {h['result']}")
                 st.markdown("---")
         else:
             st.info("No history yet.")
