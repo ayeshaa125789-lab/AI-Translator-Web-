@@ -81,6 +81,7 @@ def auth_ui():
     choice = st.radio("Select Option:", ["Login", "Signup"])
     users_db = users_data["users"]
 
+    # ------------------- LOGIN -------------------
     if choice == "Login":
         username = st.text_input("Username", key="login_user")
         password = st.text_input("Password", type="password", key="login_pass")
@@ -92,64 +93,80 @@ def auth_ui():
             else:
                 st.error("Invalid username or password.")
 
-    else:  # Signup
+    # ------------------- SIGNUP -------------------
+    else:
         new_user = st.text_input("Choose username", key="signup_user")
         new_pass = st.text_input("Choose password", type="password", key="signup_pass")
+
         if st.button("Create Account"):
             if not new_user or not new_pass:
                 st.warning("Enter username and password.")
             elif new_user in users_db:
                 st.warning("Username already exists.")
             else:
+                # Save new user
                 users_db[new_user] = {"password": new_pass}
                 users_data["users"] = users_db
                 save_json_safe(USERS_FILE, users_data)
-                st.success("Account created! You can now login.")
 
-    st.stop()
+                # AUTO LOGIN
+                st.session_state.user = new_user
+                st.success(f"Account created! Welcome, {new_user}! 🎉")
+                st.experimental_rerun()
+
+    if st.session_state.user is None:
+        st.stop()
 
 # -----------------------------
-# Main
+# Main App
 # -----------------------------
 if st.session_state.user is None:
     auth_ui()
+
 else:
-    st.sidebar.write(f"👋 Logged in as {st.session_state.user}")
+    st.sidebar.write(f"👋 Logged in as **{st.session_state.user}**")
     if st.sidebar.button("🚪 Logout"):
         st.session_state.user = None
         st.experimental_rerun()
 
     st.title("🌍 AI Translator — Translate Instantly")
+
     col1, col2 = st.columns(2)
     with col1:
         source_lang = st.selectbox("🌐 From Language", list(LANGUAGES.keys()), index=list(LANGUAGES.keys()).index("English"))
         text = st.text_area("Enter Text", placeholder="Type something...")
+
     with col2:
         target_lang = st.selectbox("🎯 To Language", list(LANGUAGES.keys()), index=list(LANGUAGES.keys()).index("Urdu"))
+
         if st.button("🚀 Translate"):
             if text.strip():
                 try:
-                    result = GoogleTranslator(source=LANGUAGES[source_lang], target=LANGUAGES[target_lang]).translate(text)
+                    result = GoogleTranslator(
+                        source=LANGUAGES[source_lang],
+                        target=LANGUAGES[target_lang]
+                    ).translate(text)
+
                     st.subheader(f"🈸 Translation ({source_lang} → {target_lang})")
                     st.text_area("Output", result, height=150)
 
-                    # Voice output
+                    # Voice
                     try:
                         tts = gTTS(result, lang=LANGUAGES[target_lang])
                         tts.save("output.mp3")
-                        st.audio("output.mp3", format="audio/mp3")
+                        st.audio("output.mp3")
                         os.remove("output.mp3")
                     except:
                         try:
                             engine = pyttsx3.init()
                             engine.save_to_file(result, "output_backup.mp3")
                             engine.runAndWait()
-                            st.audio("output_backup.mp3", format="audio/mp3")
+                            st.audio("output_backup.mp3")
                             os.remove("output_backup.mp3")
                         except:
                             st.warning("Audio not supported for this language.")
 
-                    # Save history
+                    # Save History
                     user = st.session_state.user
                     if user not in history_data:
                         history_data[user] = []
@@ -164,6 +181,7 @@ else:
 
                 except Exception as e:
                     st.error(f"⚠️ Translation Error: {e}")
+
             else:
                 st.warning("Enter text to translate.")
 
@@ -174,7 +192,7 @@ else:
             for h in reversed(user_history[-10:]):
                 st.markdown(f"**🕒 {h['time']} | {h['from']} → {h['to']}**")
                 st.write(f"**Input:** {h['text']}")
-                st.write(f"**Output:** {h['result']}")
+                st.write(f"**Output:** {h['result']}") 
                 st.markdown("---")
         else:
             st.info("No history yet.")
