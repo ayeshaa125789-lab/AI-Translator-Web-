@@ -2,24 +2,23 @@ import streamlit as st
 from deep_translator import GoogleTranslator
 from gtts import gTTS
 import pyttsx3
-import os, json
+import os
+import json
 from datetime import datetime
 
 # -----------------------------
-# App Config
+# Config
 # -----------------------------
 st.set_page_config(page_title="🌍 AI Translator", page_icon="🌐", layout="wide")
-
-# -----------------------------
-# Optional JSON Files
-# -----------------------------
 USERS_FILE = "users.json"
 HISTORY_FILE = "history.json"
 
+# -----------------------------
+# JSON helpers
+# -----------------------------
 def load_json_safe(path, default):
     try:
-        data = json.load(open(path, "r", encoding="utf-8"))
-        return data
+        return json.load(open(path, "r", encoding="utf-8"))
     except:
         return default
 
@@ -28,8 +27,11 @@ def save_json_safe(path, data):
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
     except:
-        pass  # ignore errors
+        pass
 
+# -----------------------------
+# Load data
+# -----------------------------
 users_data = load_json_safe(USERS_FILE, {})
 if "users" not in users_data:
     users_data["users"] = {}
@@ -37,13 +39,13 @@ if "users" not in users_data:
 history_data = load_json_safe(HISTORY_FILE, {})
 
 # -----------------------------
-# Session State
+# Session state
 # -----------------------------
 if "user" not in st.session_state:
     st.session_state.user = None
 
 # -----------------------------
-# Language List (200+)
+# Languages
 # -----------------------------
 LANGUAGES = {
     'Afrikaans': 'af', 'Albanian': 'sq', 'Amharic': 'am', 'Arabic': 'ar', 'Armenian': 'hy',
@@ -72,43 +74,42 @@ LANGUAGES = {
 }
 
 # -----------------------------
-# Authentication UI
+# Auth function
 # -----------------------------
 def auth_ui():
-    st.title("🌍 AI Translator")
-    st.write("Login or Signup to continue.")
+    st.title("🌍 AI Translator — Login or Signup")
+    choice = st.radio("Select Option:", ["Login", "Signup"])
     users_db = users_data["users"]
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("🔐 Login")
-        lu = st.text_input("Username", key="login_user")
-        lp = st.text_input("Password", type="password", key="login_pass")
+    if choice == "Login":
+        username = st.text_input("Username", key="login_user")
+        password = st.text_input("Password", type="password", key="login_pass")
         if st.button("Login"):
-            if lu in users_db and users_db[lu]["password"] == lp:
-                st.session_state.user = lu
-                st.success(f"Welcome back, {lu}!")
+            if username in users_db and users_db[username]["password"] == password:
+                st.session_state.user = username
+                st.success(f"Welcome back, {username}!")
                 st.experimental_rerun()
             else:
                 st.error("Invalid username or password.")
 
-    with col2:
-        st.subheader("🆕 Signup")
-        su = st.text_input("Choose username", key="signup_user")
-        sp = st.text_input("Choose password", type="password", key="signup_pass")
-        if st.button("Create account"):
-            if not su or not sp:
+    else:  # Signup
+        new_user = st.text_input("Choose username", key="signup_user")
+        new_pass = st.text_input("Choose password", type="password", key="signup_pass")
+        if st.button("Create Account"):
+            if not new_user or not new_pass:
                 st.warning("Enter username and password.")
-            elif su in users_db:
+            elif new_user in users_db:
                 st.warning("Username already exists.")
             else:
-                users_db[su] = {"password": sp}
+                users_db[new_user] = {"password": new_pass}
                 users_data["users"] = users_db
                 save_json_safe(USERS_FILE, users_data)
-                st.success("Account created. You can now login.")
+                st.success("Account created! You can now login.")
+
+    st.stop()
 
 # -----------------------------
-# Main App
+# Main
 # -----------------------------
 if st.session_state.user is None:
     auth_ui()
@@ -128,16 +129,11 @@ else:
         if st.button("🚀 Translate"):
             if text.strip():
                 try:
-                    # Roman Urdu detection
-                    if any(word in text.lower() for word in ["tum", "mera", "kyun", "kaise", "nahi", "acha", "shukriya"]):
-                        result = GoogleTranslator(source='ur', target=LANGUAGES[target_lang]).translate(text)
-                    else:
-                        result = GoogleTranslator(source=LANGUAGES[source_lang], target=LANGUAGES[target_lang]).translate(text)
-
+                    result = GoogleTranslator(source=LANGUAGES[source_lang], target=LANGUAGES[target_lang]).translate(text)
                     st.subheader(f"🈸 Translation ({source_lang} → {target_lang})")
                     st.text_area("Output", result, height=150)
 
-                    # Voice Output
+                    # Voice output
                     try:
                         tts = gTTS(result, lang=LANGUAGES[target_lang])
                         tts.save("output.mp3")
@@ -153,7 +149,7 @@ else:
                         except:
                             st.warning("Audio not supported for this language.")
 
-                    # History in memory + optional save
+                    # Save history
                     user = st.session_state.user
                     if user not in history_data:
                         history_data[user] = []
@@ -169,7 +165,7 @@ else:
                 except Exception as e:
                     st.error(f"⚠️ Translation Error: {e}")
             else:
-                st.warning("Enter some text to translate.")
+                st.warning("Enter text to translate.")
 
     # History
     if st.checkbox("📜 Show History"):
