@@ -1,11 +1,6 @@
-streamlit==1.51.0
-deep-translator==1.11.4
-gTTS==2.5.4
-pyttsx3==2.99
-playsound==1.2.2
-fuzzywuzzy==0.18.0
-python-Levenshtein==0.27.3
-langdetect==1.0.9
-speechrecognition==3.14.3
-pydub==0.25.1
-streamlit-audiorecorder==0.0.6
+streamlit
+
+deep-translator
+gtts
+pyttsx3
+fpdf
