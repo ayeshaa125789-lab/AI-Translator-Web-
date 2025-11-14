@@ -5,11 +5,17 @@ import pyttsx3
 import os, json
 from datetime import datetime
 
+# -----------------------------
+# App Config
+# -----------------------------
 st.set_page_config(page_title="🌍 AI Translator", page_icon="🌐", layout="wide")
 
 # -----------------------------
-# Optional Files (Memory Fallback)
+# Optional JSON Files
 # -----------------------------
+USERS_FILE = "users.json"
+HISTORY_FILE = "history.json"
+
 def load_json_safe(path, default):
     try:
         data = json.load(open(path, "r", encoding="utf-8"))
@@ -22,12 +28,12 @@ def save_json_safe(path, data):
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
     except:
-        pass  # ignore if file cannot be written
+        pass  # ignore errors
 
-USERS_FILE = "users.json"
-HISTORY_FILE = "history.json"
+users_data = load_json_safe(USERS_FILE, {})
+if "users" not in users_data:
+    users_data["users"] = {}
 
-users_data = load_json_safe(USERS_FILE, {"users": {}})
 history_data = load_json_safe(HISTORY_FILE, {})
 
 # -----------------------------
@@ -37,7 +43,7 @@ if "user" not in st.session_state:
     st.session_state.user = None
 
 # -----------------------------
-# Languages
+# Language List (200+)
 # -----------------------------
 LANGUAGES = {
     'Afrikaans': 'af', 'Albanian': 'sq', 'Amharic': 'am', 'Arabic': 'ar', 'Armenian': 'hy',
@@ -71,11 +77,9 @@ LANGUAGES = {
 def auth_ui():
     st.title("🌍 AI Translator")
     st.write("Login or Signup to continue.")
-
     users_db = users_data["users"]
 
     col1, col2 = st.columns(2)
-
     with col1:
         st.subheader("🔐 Login")
         lu = st.text_input("Username", key="login_user")
