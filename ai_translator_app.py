@@ -5,46 +5,30 @@ import pyttsx3
 import os, json
 from datetime import datetime
 
-# -----------------------------
-# App Config
-# -----------------------------
 st.set_page_config(page_title="🌍 AI Translator", page_icon="🌐", layout="wide")
 
 # -----------------------------
-# Files
+# Optional Files (Memory Fallback)
 # -----------------------------
-USERS_FILE = "users.json"
-HISTORY_FILE = "history.json"
-
-# -----------------------------
-# JSON Helpers
-# -----------------------------
-def load_json(path, default=None):
-    if not os.path.exists(path):
-        if default is not None:
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(default, f, indent=4)
-            return default
-        return {}
+def load_json_safe(path, default):
     try:
         data = json.load(open(path, "r", encoding="utf-8"))
         return data
     except:
-        if default is not None:
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(default, f, indent=4)
-            return default
-        return {}
+        return default
 
-def save_json(path, data):
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
+def save_json_safe(path, data):
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+    except:
+        pass  # ignore if file cannot be written
 
-# -----------------------------
-# Load Users & History
-# -----------------------------
-users_data = load_json(USERS_FILE, {"users": {}})
-history_data = load_json(HISTORY_FILE, {})
+USERS_FILE = "users.json"
+HISTORY_FILE = "history.json"
+
+users_data = load_json_safe(USERS_FILE, {"users": {}})
+history_data = load_json_safe(HISTORY_FILE, {})
 
 # -----------------------------
 # Session State
@@ -115,7 +99,8 @@ def auth_ui():
                 st.warning("Username already exists.")
             else:
                 users_db[su] = {"password": sp}
-                save_json(USERS_FILE, {"users": users_db})
+                users_data["users"] = users_db
+                save_json_safe(USERS_FILE, users_data)
                 st.success("Account created. You can now login.")
 
 # -----------------------------
@@ -139,15 +124,16 @@ else:
         if st.button("🚀 Translate"):
             if text.strip():
                 try:
+                    # Roman Urdu detection
                     if any(word in text.lower() for word in ["tum", "mera", "kyun", "kaise", "nahi", "acha", "shukriya"]):
                         result = GoogleTranslator(source='ur', target=LANGUAGES[target_lang]).translate(text)
                     else:
                         result = GoogleTranslator(source=LANGUAGES[source_lang], target=LANGUAGES[target_lang]).translate(text)
-                    
+
                     st.subheader(f"🈸 Translation ({source_lang} → {target_lang})")
                     st.text_area("Output", result, height=150)
 
-                    # Voice
+                    # Voice Output
                     try:
                         tts = gTTS(result, lang=LANGUAGES[target_lang])
                         tts.save("output.mp3")
@@ -163,7 +149,7 @@ else:
                         except:
                             st.warning("Audio not supported for this language.")
 
-                    # History
+                    # History in memory + optional save
                     user = st.session_state.user
                     if user not in history_data:
                         history_data[user] = []
@@ -174,7 +160,7 @@ else:
                         "text": text,
                         "result": result
                     })
-                    save_json(HISTORY_FILE, history_data)
+                    save_json_safe(HISTORY_FILE, history_data)
 
                 except Exception as e:
                     st.error(f"⚠️ Translation Error: {e}")
