@@ -5,3 +5,7 @@ pyttsx3
 playsound==1.2.2
 fuzzywuzzy
 python-Levenshtein
+langdetect
+speechrecognition
+pydub
+streamlit-audiorecorder
