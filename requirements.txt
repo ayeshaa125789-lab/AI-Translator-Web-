@@ -10,8 +10,8 @@ gTTS>=2.3.2
 # PDF reading
 PyPDF2>=3.0.1
 
-# PDF generation
+# PDF creation with proper paragraphs
 reportlab>=4.0.0
 
-# Optional: better PDF extraction (PyMuPDF)
+# Optional: better PDF extraction for scanned PDFs (not required for text PDFs)
 PyMuPDF>=1.22.5
