@@ -1,167 +1,109 @@
 import streamlit as st
 from deep_translator import GoogleTranslator
 from gtts import gTTS
-import pyttsx3
+import PyPDF2
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+import tempfile
 import os
-import json
 from datetime import datetime
-from fpdf import FPDF
 
-# -----------------------------
+# --------------------------------------------------
+# 300+ Languages
+# --------------------------------------------------
+LANGUAGES = GoogleTranslator().get_supported_languages(as_dict=True)
+LANG_LIST = list(LANGUAGES.keys())
+
+# --------------------------------------------------
+# Streamlit UI
+# --------------------------------------------------
 st.set_page_config(page_title="🌍 AI Translator", page_icon="🌐", layout="wide")
-USERS_FILE = "users.json"
-HISTORY_FILE = "history.json"
+st.title("🌍 AI Translator — Translate Text & PDF in 300+ Languages")
 
-# JSON helpers
-def load_json_safe(path, default):
-    try:
-        return json.load(open(path, "r", encoding="utf-8"))
-    except:
-        return default
+st.markdown("#### Translate text or PDF instantly — supports 300+ global languages.")
 
-def save_json_safe(path, data):
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
-    except:
-        pass
+# --------------------------------------------------
+# Sidebar
+# --------------------------------------------------
+st.sidebar.header("🌐 Language Settings")
+src = st.sidebar.selectbox("From Language", LANG_LIST, index=LANG_LIST.index("english"))
+dest = st.sidebar.selectbox("To Language", LANG_LIST, index=LANG_LIST.index("urdu"))
 
-# Load data
-users_data = load_json_safe(USERS_FILE, {})
-if "users" not in users_data:
-    users_data["users"] = {}
+# --------------------------------------------------
+# Tabs
+# --------------------------------------------------
+tab1, tab2 = st.tabs(["📄 Text Translator", "📕 PDF Translator"])
 
-history_data = load_json_safe(HISTORY_FILE, {})
 
-# Session state
-if "user" not in st.session_state:
-    st.session_state.user = None
+# --------------------------------------------------
+# TEXT TRANSLATION
+# --------------------------------------------------
+with tab1:
+    st.subheader("✏️ Translate Text")
 
-# Languages
-LANGUAGES = {
-    'English': 'en', 'Urdu': 'ur', 'Spanish': 'es', 'French': 'fr', 'Arabic': 'ar',
-    'Hindi': 'hi', 'Chinese (Simplified)': 'zh-CN', 'Russian': 'ru', 'German': 'de'
-}
+    text_input = st.text_area("Enter your text here:", height=200)
 
-# -----------------------------
-# Auth function
-def auth_ui():
-    st.title("🌍 AI Translator — Login or Signup")
-    choice = st.radio("Select Option:", ["Login", "Signup"])
-    users_db = users_data["users"]
-
-    if choice == "Login":
-        username = st.text_input("Username", key="login_user")
-        password = st.text_input("Password", type="password", key="login_pass")
-        if st.button("Login"):
-            if username in users_db and users_db[username]["password"] == password:
-                st.session_state.user = username
-                st.success(f"Welcome back, {username}!")
-                st.stop()
-                st.rerun()
-            else:
-                st.error("Invalid username or password.")
-
-    else:
-        new_user = st.text_input("Choose username", key="signup_user")
-        new_pass = st.text_input("Choose password", type="password", key="signup_pass")
-        if st.button("Create Account"):
-            if not new_user or not new_pass:
-                st.warning("Enter username and password.")
-            elif new_user in users_db:
-                st.warning("Username already exists.")
-            else:
-                users_db[new_user] = {"password": new_pass}
-                users_data["users"] = users_db
-                save_json_safe(USERS_FILE, users_data)
-                st.session_state.user = new_user
-                st.success(f"Account created! Welcome, {new_user}! 🎉")
-                st.stop()
-                st.rerun()
-
-    if st.session_state.user is None:
-        st.stop()
-
-# -----------------------------
-# Main App
-if st.session_state.user is None:
-    auth_ui()
-else:
-    st.sidebar.write(f"👋 Logged in as **{st.session_state.user}**")
-    if st.sidebar.button("🚪 Logout"):
-        st.session_state.user = None
-        st.stop()
-        st.rerun()
-
-    st.title("🌍 AI Translator — Translate Instantly")
-
-    col1, col2 = st.columns([3,1])
-    with col1:
-        text = st.text_area("Enter Text", placeholder="Type or paste text in any language...")
-
-    with col2:
-        target_lang = st.selectbox("🎯 Translate To", list(LANGUAGES.keys()), index=list(LANGUAGES.keys()).index("Urdu"))
-
-        if st.button("🚀 Translate"):
-            if text.strip():
-                try:
-                    result = GoogleTranslator(source='auto', target=LANGUAGES[target_lang]).translate(text)
-                    st.subheader(f"🈸 Translation → {target_lang}")
-                    st.text_area("Output", result, height=150)
-
-                    # Voice
-                    try:
-                        tts = gTTS(result, lang=LANGUAGES[target_lang])
-                        tts.save("output.mp3")
-                        st.audio("output.mp3")
-                        os.remove("output.mp3")
-                    except:
-                        try:
-                            engine = pyttsx3.init()
-                            engine.save_to_file(result, "output_backup.mp3")
-                            engine.runAndWait()
-                            st.audio("output_backup.mp3")
-                            os.remove("output_backup.mp3")
-                        except:
-                            st.warning("Audio not supported for this language.")
-
-                    # Save History
-                    user = st.session_state.user
-                    if user not in history_data:
-                        history_data[user] = []
-                    history_data[user].append({
-                        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "to": target_lang,
-                        "text": text,
-                        "result": result
-                    })
-                    save_json_safe(HISTORY_FILE, history_data)
-
-                    # PDF Download
-                    if st.button("📄 Download as PDF"):
-                        pdf = FPDF()
-                        pdf.add_page()
-                        pdf.set_font("Arial", size=12)
-                        pdf.multi_cell(0, 8, f"Original Text:\n{text}\n\nTranslated Text ({target_lang}):\n{result}\n\nDate: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-                        pdf_file = f"translation_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
-                        pdf.output(pdf_file)
-                        with open(pdf_file, "rb") as f:
-                            st.download_button("Download PDF", f, file_name=pdf_file, mime="application/pdf")
-                        os.remove(pdf_file)
-
-                except Exception as e:
-                    st.error(f"⚠️ Translation Error: {e}")
-            else:
-                st.warning("Enter text to translate.")
-
-    # History
-    if st.checkbox("📜 Show History"):
-        user_history = history_data.get(st.session_state.user, [])
-        if user_history:
-            for h in reversed(user_history[-10:]):
-                st.markdown(f"**🕒 {h['time']} | → {h['to']}**")
-                st.write(f"**Input:** {h['text']}")
-                st.write(f"**Output:** {h['result']}")
-                st.markdown("---")
+    if st.button("Translate Text"):
+        if text_input.strip() == "":
+            st.warning("Please enter some text.")
         else:
-            st.info("No history yet.")
+            translated = GoogleTranslator(source=src, target=dest).translate(text_input)
+            st.success("Translation Completed!")
+            st.text_area("Translated Text:", translated, height=250)
+
+            # TTS Audio
+            tts_file = "speech.mp3"
+            tts = gTTS(translated)
+            tts.save(tts_file)
+            st.audio(tts_file, format="audio/mp3")
+
+            # Download text
+            st.download_button("⬇️ Download Translation", translated, file_name="translation.txt")
+
+
+# --------------------------------------------------
+# PDF TRANSLATION
+# --------------------------------------------------
+with tab2:
+    st.subheader("📘 Translate PDF File")
+
+    uploaded_pdf = st.file_uploader("Upload PDF", type=["pdf"])
+
+    if uploaded_pdf is not None:
+        if st.button("Translate PDF"):
+            try:
+                # Extract text from PDF
+                reader = PyPDF2.PdfReader(uploaded_pdf)
+                full_text = ""
+                for page in reader.pages:
+                    full_text += page.extract_text() + "\n"
+
+                if full_text.strip() == "":
+                    st.error("No text found in PDF (maybe scanned image PDF).")
+                else:
+                    # Translate extracted text
+                    translated_pdf_text = GoogleTranslator(
+                        source=src, target=dest
+                    ).translate(full_text)
+
+                    st.success("PDF Translated Successfully!")
+                    st.text_area("Translated PDF Text:", translated_pdf_text, height=400)
+
+                    # Download new translated PDF
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
+                        c = canvas.Canvas(temp_pdf.name, pagesize=letter)
+                        text_object = c.beginText(40, 750)
+                        for line in translated_pdf_text.split("\n"):
+                            text_object.textLine(line)
+                        c.drawText(text_object)
+                        c.save()
+
+                        st.download_button(
+                            "⬇️ Download Translated PDF",
+                            open(temp_pdf.name, "rb"),
+                            file_name="translated.pdf",
+                            mime="application/pdf"
+                        )
+
+            except Exception as e:
+                st.error(f"Error reading PDF: {e}")
