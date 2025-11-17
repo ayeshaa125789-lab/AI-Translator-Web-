@@ -1,17 +1,5 @@
-# Streamlit web app
 streamlit>=1.25.0
-
-# Translation library
-deep-translator>=1.9.6
-
-# Text-to-speech
 gTTS>=2.3.2
-
-# PDF reading
 PyPDF2>=3.0.1
-
-# PDF creation with proper paragraphs
 reportlab>=4.0.0
-
-# Optional: better PDF extraction for scanned PDFs (not required for text PDFs)
-PyMuPDF>=1.22.5
+argostranslate>=1.9.0
