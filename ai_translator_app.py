@@ -1,6 +1,6 @@
 import streamlit as st
 import argostranslate.package
-import argostranslate.translate
+from argostranslate.translate import get_installed_languages
 from gtts import gTTS
 import PyPDF2
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
@@ -24,8 +24,11 @@ def load_json_safe(path, default):
         return default
 
 def save_json_safe(path, data):
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+    except Exception as e:
+        st.error(f"Failed to save data: {e}")
 
 users_data = load_json_safe(USERS_FILE, {"users": {}})
 history_data = load_json_safe(HISTORY_FILE, {})
@@ -36,8 +39,8 @@ if "user" not in st.session_state:
     st.session_state.user = None
 
 # -------------------------
-# Languages (Argos installed)
-installed_languages = argostranslate.translate.get_installed_languages()
+# Load installed Argos languages
+installed_languages = get_installed_languages()
 LANG_LIST = [lang.name for lang in installed_languages]
 
 # -------------------------
@@ -83,10 +86,12 @@ else:
         st.stop()
 
 # -------------------------
-# Helper: Translate text (unlimited)
+# Helper: Translate text (offline, unlimited)
 def translate_text(text, source_lang, target_lang):
-    src_lang = next(l for l in installed_languages if l.name == source_lang)
-    tgt_lang = next(l for l in installed_languages if l.name == target_lang)
+    src_lang = next((l for l in installed_languages if l.name == source_lang), None)
+    tgt_lang = next((l for l in installed_languages if l.name == target_lang), None)
+    if not src_lang or not tgt_lang:
+        raise ValueError("Language not installed")
     translation = src_lang.get_translation(tgt_lang)
     return translation.translate(text)
 
@@ -113,6 +118,10 @@ def create_translated_pdf_pages(translated_pages, output_path):
 
 # -------------------------
 # Sidebar: Language Selection
+if not LANG_LIST:
+    st.error("⚠️ No Argos Translate language packages installed! Install languages first.")
+    st.stop()
+
 src = st.sidebar.selectbox("From Language", LANG_LIST)
 dest = st.sidebar.selectbox("To Language", LANG_LIST)
 
@@ -124,36 +133,42 @@ tab1, tab2 = st.tabs(["📄 Text Translator", "📕 PDF Translator"])
 # Text Translator
 with tab1:
     st.subheader("✏️ Translate Text")
-    text_input = st.text_area("Enter your text here:", height=200)
+    text_input = st.text_area("Enter your text here:", height=300)
 
     if st.button("Translate Text"):
         if not text_input.strip():
             st.warning("Please enter some text.")
         else:
-            translated = translate_text(text_input, src, dest)
-            st.success("Translation Completed!")
-            st.text_area("Translated Text:", translated, height=250)
+            try:
+                translated = translate_text(text_input, src, dest)
+                st.success("Translation Completed!")
+                st.text_area("Translated Text:", translated, height=300)
 
-            # Save history
-            user = st.session_state.user
-            if user not in history_data:
-                history_data[user] = []
-            history_data[user].append({
-                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "type": "text",
-                "input": text_input,
-                "output": translated
-            })
-            save_json_safe(HISTORY_FILE, history_data)
+                # Save history
+                user = st.session_state.user
+                if user not in history_data:
+                    history_data[user] = []
+                history_data[user].append({
+                    "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "type": "text",
+                    "input": text_input,
+                    "output": translated
+                })
+                save_json_safe(HISTORY_FILE, history_data)
 
-            # TTS
-            tts_file = "speech.mp3"
-            tts = gTTS(translated)
-            tts.save(tts_file)
-            st.audio(tts_file, format="audio/mp3")
+                # TTS (validate length)
+                if len(translated) < 5000:
+                    tts_file = "speech.mp3"
+                    tts = gTTS(translated)
+                    tts.save(tts_file)
+                    st.audio(tts_file, format="audio/mp3")
+                else:
+                    st.warning("Text is too long for TTS, skipping voice output.")
 
-            # Download text
-            st.download_button("⬇️ Download Translation", translated, file_name="translation.txt")
+                # Download text
+                st.download_button("⬇️ Download Translation", translated, file_name="translation.txt")
+            except Exception as e:
+                st.error(f"Translation Failed: {e}")
 
 # -------------------------
 # PDF Translator
@@ -171,18 +186,17 @@ with tab2:
                     st.error("No text found in PDF (scanned/image PDFs not supported).")
                 else:
                     translated_pages = []
-                    for page_text in pages_text:
+                    for i, page_text in enumerate(pages_text):
                         if page_text.strip():
                             translated_pages.append(translate_text(page_text, src, dest))
                         else:
                             translated_pages.append("")
+                        st.progress((i+1)/len(pages_text))  # Show progress bar
 
-                    # Preview first 1000 chars per page
                     preview = "\n\n---\n\n".join([p[:1000] for p in translated_pages if p])
                     st.subheader(f"Translated PDF Preview → {dest}")
                     st.text_area("Preview (first part)", preview, height=300)
 
-                    # Save history
                     user = st.session_state.user
                     if user not in history_data:
                         history_data[user] = []
@@ -194,15 +208,15 @@ with tab2:
                     })
                     save_json_safe(HISTORY_FILE, history_data)
 
-                    # Create translated PDF
                     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
                         create_translated_pdf_pages(translated_pages, tmp_pdf.name)
-                        st.download_button(
-                            "⬇️ Download Translated PDF",
-                            open(tmp_pdf.name, "rb"),
-                            file_name=f"translated_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf",
-                            mime="application/pdf"
-                        )
+                        with open(tmp_pdf.name, "rb") as f:
+                            st.download_button(
+                                "⬇️ Download Translated PDF",
+                                data=f,
+                                file_name=f"translated_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf",
+                                mime="application/pdf"
+                            )
                         os.unlink(tmp_pdf.name)
 
             except Exception as e:
