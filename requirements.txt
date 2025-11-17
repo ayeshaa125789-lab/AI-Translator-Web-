@@ -1,6 +1,17 @@
-streamlit
+# Python version requirement
+python>=3.9
 
-deep-translator
-gtts
-pyttsx3
-fpdf
+# Web app framework
+streamlit>=1.25.0
+
+# Translation library
+deep-translator>=1.9.6
+
+# Text-to-speech
+gTTS>=2.3.2
+
+# PDF reading
+PyPDF2>=3.0.1
+
+# PDF generation
+reportlab>=4.0.0
