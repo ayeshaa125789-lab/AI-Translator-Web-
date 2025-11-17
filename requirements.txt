@@ -1,7 +1,4 @@
-# Python version requirement
-python>=3.9
-
-# Web app framework
+# Streamlit web app
 streamlit>=1.25.0
 
 # Translation library
@@ -15,3 +12,6 @@ PyPDF2>=3.0.1
 
 # PDF generation
 reportlab>=4.0.0
+
+# Optional: better PDF extraction (PyMuPDF)
+PyMuPDF>=1.22.5
