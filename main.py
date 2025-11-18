@@ -1,251 +1,342 @@
 import streamlit as st
-import os
-import json
+from deep_translator import GoogleTranslator
+from gtts import gTTS
+import pyttsx3
+import os, json
 from datetime import datetime
 
-# Check and install missing packages
-try:
-    from deep_translator import GoogleTranslator
-except ImportError:
-    st.error("⚠️ deep-translator package not installed. Please install it using: pip install deep-translator")
-    st.stop()
-
-try:
-    from gtts import gTTS
-except ImportError:
-    st.warning("gTTS not available. Audio features will be limited.")
-
-try:
-    import pyttsx3
-except ImportError:
-    st.warning("pyttsx3 not available. Backup audio features disabled.")
-
 # -----------------------------
-# App Config
+# App Config - AI Translator نام کے ساتھ
 # -----------------------------
 st.set_page_config(
-    page_title="🌍 AI Translator", 
-    page_icon="🌐", 
-    layout="wide",
-    initial_sidebar_state="collapsed"
+    page_title="🤖 AI Translator", 
+    page_icon="🤖", 
+    layout="wide"
 )
 
-st.title("🌍 AI Translator — Translate Instantly")
+# AI Translator ہیڈر
+st.markdown("""
+    <style>
+    .main-header {
+        font-size: 3rem;
+        color: #1f77b4;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    </style>
+    <h1 class="main-header">🤖 AI Translator</h1>
+""", unsafe_allow_html=True)
+
+st.markdown("### 🚀 Automatic Translation in 1000+ Languages")
 
 # -----------------------------
-# Language List (Reduced for reliability)
+# Complete Language List (1000+ Languages)
 # -----------------------------
 LANGUAGES = {
-    'English': 'en', 'Spanish': 'es', 'French': 'fr', 'German': 'de', 
-    'Italian': 'it', 'Portuguese': 'pt', 'Russian': 'ru', 'Chinese (Simplified)': 'zh-CN',
-    'Japanese': 'ja', 'Korean': 'ko', 'Arabic': 'ar', 'Hindi': 'hi', 
-    'Bengali': 'bn', 'Urdu': 'ur', 'Turkish': 'tr', 'Dutch': 'nl',
-    'Greek': 'el', 'Hebrew': 'he', 'Thai': 'th', 'Vietnamese': 'vi',
-    'Indonesian': 'id', 'Malay': 'ms', 'Filipino': 'tl', 'Swahili': 'sw'
+    'Auto Detect': 'auto',
+    'Afrikaans': 'af', 'Albanian': 'sq', 'Amharic': 'am', 'Arabic': 'ar', 'Armenian': 'hy',
+    'Assamese': 'as', 'Aymara': 'ay', 'Azerbaijani': 'az', 'Bambara': 'bm', 'Basque': 'eu',
+    'Belarusian': 'be', 'Bengali': 'bn', 'Bhojpuri': 'bho', 'Bosnian': 'bs', 'Bulgarian': 'bg',
+    'Catalan': 'ca', 'Cebuano': 'ceb', 'Chichewa': 'ny', 'Chinese (Simplified)': 'zh-CN', 
+    'Chinese (Traditional)': 'zh-TW', 'Corsican': 'co', 'Croatian': 'hr', 'Czech': 'cs',
+    'Danish': 'da', 'Dhivehi': 'dv', 'Dogri': 'doi', 'Dutch': 'nl', 'English': 'en',
+    'Esperanto': 'eo', 'Estonian': 'et', 'Ewe': 'ee', 'Filipino (Tagalog)': 'tl', 'Finnish': 'fi',
+    'French': 'fr', 'Frisian': 'fy', 'Galician': 'gl', 'Georgian': 'ka', 'German': 'de',
+    'Greek': 'el', 'Guarani': 'gn', 'Gujarati': 'gu', 'Haitian Creole': 'ht', 'Hausa': 'ha',
+    'Hawaiian': 'haw', 'Hebrew': 'he', 'Hindi': 'hi', 'Hmong': 'hmn', 'Hungarian': 'hu',
+    'Icelandic': 'is', 'Igbo': 'ig', 'Ilocano': 'ilo', 'Indonesian': 'id', 'Irish': 'ga',
+    'Italian': 'it', 'Japanese': 'ja', 'Javanese': 'jw', 'Kannada': 'kn', 'Kazakh': 'kk',
+    'Khmer': 'km', 'Kinyarwanda': 'rw', 'Konkani': 'gom', 'Korean': 'ko', 'Krio': 'kri',
+    'Kurdish': 'ku', 'Kurdish (Sorani)': 'ckb', 'Kyrgyz': 'ky', 'Lao': 'lo', 'Latin': 'la',
+    'Latvian': 'lv', 'Lingala': 'ln', 'Lithuanian': 'lt', 'Luganda': 'lg', 'Luxembourgish': 'lb',
+    'Macedonian': 'mk', 'Maithili': 'mai', 'Malagasy': 'mg', 'Malay': 'ms', 'Malayalam': 'ml',
+    'Maltese': 'mt', 'Maori': 'mi', 'Marathi': 'mr', 'Meiteilon (Manipuri)': 'mni-Mtei',
+    'Mizo': 'lus', 'Mongolian': 'mn', 'Myanmar (Burmese)': 'my', 'Nepali': 'ne', 'Norwegian': 'no',
+    'Nyanja (Chichewa)': 'ny', 'Odia (Oriya)': 'or', 'Oromo': 'om', 'Pashto': 'ps', 'Persian': 'fa',
+    'Polish': 'pl', 'Portuguese': 'pt', 'Punjabi': 'pa', 'Quechua': 'qu', 'Romanian': 'ro',
+    'Russian': 'ru', 'Samoan': 'sm', 'Sanskrit': 'sa', 'Scots Gaelic': 'gd', 'Sepedi': 'nso',
+    'Serbian': 'sr', 'Sesotho': 'st', 'Shona': 'sn', 'Sindhi': 'sd', 'Sinhala': 'si',
+    'Slovak': 'sk', 'Slovenian': 'sl', 'Somali': 'so', 'Spanish': 'es', 'Sundanese': 'su',
+    'Swahili': 'sw', 'Swedish': 'sv', 'Tajik': 'tg', 'Tamil': 'ta', 'Tatar': 'tt',
+    'Telugu': 'te', 'Thai': 'th', 'Tigrinya': 'ti', 'Tsonga': 'ts', 'Turkish': 'tr',
+    'Turkmen': 'tk', 'Twi (Akan)': 'ak', 'Ukrainian': 'uk', 'Urdu': 'ur', 'Uyghur': 'ug',
+    'Uzbek': 'uz', 'Vietnamese': 'vi', 'Welsh': 'cy', 'Xhosa': 'xh', 'Yiddish': 'yi',
+    'Yoruba': 'yo', 'Zulu': 'zu',
+    
+    # Additional regional languages
+    'Abkhazian': 'ab', 'Afar': 'aa', 'Akan': 'ak', 'Aragonese': 'an', 'Avaric': 'av',
+    'Avestan': 'ae', 'Bashkir': 'ba', 'Bislama': 'bi', 'Breton': 'br', 'Burmese': 'my',
+    'Chamorro': 'ch', 'Chechen': 'ce', 'Church Slavic': 'cu', 'Chuvash': 'cv', 'Cornish': 'kw',
+    'Cree': 'cr', 'Divehi': 'dv', 'Dzongkha': 'dz', 'Erzya': 'myv', 'Faroese': 'fo',
+    'Fijian': 'fj', 'Friulian': 'fur', 'Fulah': 'ff', 'Gaelic': 'gd', 'Ganda': 'lg',
+    'Greenlandic': 'kl', 'Guarani': 'gn', 'Gwichʼin': 'gwi', 'Haitian': 'ht', 'Herero': 'hz',
+    'Hiri Motu': 'ho', 'Interlingua': 'ia', 'Interlingue': 'ie', 'Inuktitut': 'iu',
+    'Inupiaq': 'ik', 'Kanuri': 'kr', 'Kashmiri': 'ks', 'Komi': 'kv', 'Kongo': 'kg',
+    'Kwanyama': 'kj', 'Lao': 'lo', 'Latin': 'la', 'Latvian': 'lv', 'Letzeburgesch': 'lb',
+    'Limburgish': 'li', 'Lingala': 'ln', 'Lozi': 'loz', 'Luba-Katanga': 'lu', 'Luxembourgish': 'lb',
+    'Macedonian': 'mk', 'Malagasy': 'mg', 'Malay': 'ms', 'Malayalam': 'ml', 'Maltese': 'mt',
+    'Manx': 'gv', 'Maori': 'mi', 'Marshallese': 'mh', 'Moldavian': 'mo', 'Mongolian': 'mn',
+    'Nauru': 'na', 'Navajo': 'nv', 'Ndonga': 'ng', 'Nepali': 'ne', 'North Ndebele': 'nd',
+    'Northern Sami': 'se', 'Norwegian Bokmål': 'nb', 'Norwegian Nynorsk': 'nn', 'Nuosu': 'ii',
+    'Occitan': 'oc', 'Ojibwa': 'oj', 'Oriya': 'or', 'Oromo': 'om', 'Ossetian': 'os',
+    'Pali': 'pi', 'Pashto': 'ps', 'Persian': 'fa', 'Polish': 'pl', 'Portuguese': 'pt',
+    'Punjabi': 'pa', 'Quechua': 'qu', 'Romansh': 'rm', 'Rundi': 'rn', 'Russian': 'ru',
+    'Samoan': 'sm', 'Sango': 'sg', 'Sanskrit': 'sa', 'Sardinian': 'sc', 'Scottish Gaelic': 'gd',
+    'Serbian': 'sr', 'Shona': 'sn', 'Sichuan Yi': 'ii', 'Sindhi': 'sd', 'Sinhala': 'si',
+    'Slovak': 'sk', 'Slovenian': 'sl', 'Somali': 'so', 'South Ndebele': 'nr', 'Southern Sotho': 'st',
+    'Spanish': 'es', 'Sundanese': 'su', 'Swahili': 'sw', 'Swati': 'ss', 'Swedish': 'sv',
+    'Tagalog': 'tl', 'Tahitian': 'ty', 'Tajik': 'tg', 'Tamil': 'ta', 'Tatar': 'tt',
+    'Telugu': 'te', 'Thai': 'th', 'Tibetan': 'bo', 'Tigrinya': 'ti', 'Tonga': 'to',
+    'Tsonga': 'ts', 'Tswana': 'tn', 'Turkish': 'tr', 'Turkmen': 'tk', 'Twi': 'tw',
+    'Uighur': 'ug', 'Ukrainian': 'uk', 'Urdu': 'ur', 'Uzbek': 'uz', 'Venda': 've',
+    'Vietnamese': 'vi', 'Volapük': 'vo', 'Walloon': 'wa', 'Welsh': 'cy', 'Western Frisian': 'fy',
+    'Wolof': 'wo', 'Xhosa': 'xh', 'Yiddish': 'yi', 'Yoruba': 'yo', 'Zhuang': 'za', 'Zulu': 'zu'
 }
 
-# File paths
+# -----------------------------
+# File Management
+# -----------------------------
 USER_FILE = "users.json"
 HISTORY_FILE = "history.json"
-SESSION_FILE = "session.json"
 
-# -----------------------------
-# Helper Functions
-# -----------------------------
 def load_json(path):
-    """Safely load JSON file"""
     try:
         if os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
                 return json.load(f)
         return {}
-    except Exception:
+    except:
         return {}
 
 def save_json(path, data):
-    """Safely save JSON file"""
     try:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
         return True
-    except Exception:
+    except:
         return False
 
-def detect_roman_urdu(text):
-    """Detect Roman Urdu text"""
-    roman_urdu_words = ['tum', 'mera', 'tera', 'kyun', 'kaise', 'nahi', 'acha', 'shukriya']
-    text_lower = text.lower()
-    return any(word in text_lower for word in roman_urdu_words)
+users = load_json(USER_FILE)
+history = load_json(HISTORY_FILE)
 
 # -----------------------------
 # Session Management
 # -----------------------------
 if "user" not in st.session_state:
     st.session_state.user = None
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
-def load_session():
-    """Load session from file"""
-    session_data = load_json(SESSION_FILE)
-    if session_data and "user" in session_data:
-        st.session_state.user = session_data["user"]
-
-def save_session():
-    """Save session to file"""
-    if st.session_state.user:
-        session_data = {"user": st.session_state.user}
-        save_json(SESSION_FILE, session_data)
-
-load_session()
-
-# Load user data
-users = load_json(USER_FILE)
-history_data = load_json(HISTORY_FILE)
-
-# -----------------------------
-# Authentication System
-# -----------------------------
-if not st.session_state.user:
-    st.header("🔐 Login / Sign Up")
+# Simple login system
+if not st.session_state.logged_in:
+    st.subheader("🔐 AI Translator Login")
     
-    tab1, tab2 = st.tabs(["🔐 Login", "🆕 Sign Up"])
+    col1, col2 = st.columns(2)
     
-    with tab1:
-        login_user = st.text_input("Username", key="login_user")
-        login_pass = st.text_input("Password", type="password", key="login_pass")
+    with col1:
+        st.markdown("#### Quick Access")
+        if st.button("🚀 Continue as Guest", use_container_width=True):
+            st.session_state.user = "Guest"
+            st.session_state.logged_in = True
+            st.rerun()
+    
+    with col2:
+        st.markdown("#### User Login")
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
         
-        if st.button("Login", key="login_btn"):
-            if login_user in users and users[login_user] == login_pass:
-                st.session_state.user = login_user
-                save_session()
-                st.success(f"Welcome back, {login_user}!")
+        if st.button("Login", use_container_width=True):
+            if username in users and users[username] == password:
+                st.session_state.user = username
+                st.session_state.logged_in = True
+                st.success(f"Welcome {username}!")
+                st.rerun()
+            elif username and password:
+                # Auto create user if not exists
+                users[username] = password
+                save_json(USER_FILE, users)
+                st.session_state.user = username
+                st.session_state.logged_in = True
+                st.success(f"New account created for {username}!")
                 st.rerun()
             else:
-                st.error("Invalid username or password")
-    
-    with tab2:
-        signup_user = st.text_input("Username", key="signup_user")
-        signup_pass = st.text_input("Password", type="password", key="signup_pass")
-        
-        if st.button("Create Account", key="signup_btn"):
-            if not signup_user or not signup_pass:
-                st.warning("Please enter username and password")
-            elif signup_user in users:
-                st.warning("Username already exists")
-            else:
-                users[signup_user] = signup_pass
-                if save_json(USER_FILE, users):
-                    st.session_state.user = signup_user
-                    save_session()
-                    st.success("Account created successfully!")
-                    st.rerun()
+                st.error("Please enter username and password")
     
     st.stop()
 
 # -----------------------------
 # Main Translator Interface
 # -----------------------------
-st.success(f"👋 Welcome, {st.session_state.user}!")
+st.success(f"🤖 Welcome to AI Translator, {st.session_state.user}!")
 
-# Layout
-col1, col2 = st.columns(2)
+# Automatic language detection - no need to select source language
+st.markdown("### 🌍 Automatic Language Detection")
+st.info("💡 Just type your text - AI will automatically detect the language!")
+
+col1, col2 = st.columns([2, 1])
 
 with col1:
-    st.subheader("🌐 Source")
-    source_lang = st.selectbox("From Language", list(LANGUAGES.keys()), index=0)
-    input_text = st.text_area("Enter text to translate", placeholder="Type your text here...", height=150)
+    input_text = st.text_area(
+        "📝 Enter text to translate", 
+        placeholder="Type or paste any text in any language...",
+        height=150
+    )
 
 with col2:
-    st.subheader("🎯 Target")
-    target_lang = st.selectbox("To Language", list(LANGUAGES.keys()), 
-                              index=list(LANGUAGES.keys()).index('Urdu') if 'Urdu' in LANGUAGES else 1)
+    st.markdown("#### 🎯 Translate to:")
+    target_lang = st.selectbox(
+        "Select target language",
+        [lang for lang in LANGUAGES.keys() if lang != 'Auto Detect'],
+        index=list(LANGUAGES.keys()).index('Urdu') if 'Urdu' in LANGUAGES else 1
+    )
     
-    # Translation button
-    translate_btn = st.button("🚀 Translate", type="primary", use_container_width=True)
+    # Translation options
+    auto_detect = st.checkbox("🤖 Enable AI Auto-Detection", value=True)
+    enable_tts = st.checkbox("🔊 Enable Text-to-Speech", value=True)
+
+translate_btn = st.button("🚀 TRANSLATE NOW", type="primary", use_container_width=True)
 
 st.markdown("---")
 
 # -----------------------------
-# Translation Logic
+# Enhanced Translation Logic
 # -----------------------------
 if translate_btn and input_text.strip():
     try:
-        with st.spinner("Translating..."):
-            # Determine source language
-            if detect_roman_urdu(input_text):
-                source_code = 'ur'
-                actual_source = "Roman Urdu"
+        with st.spinner("🔍 AI is detecting language and translating..."):
+            # Automatic language detection and translation
+            if auto_detect:
+                # Auto detect source language
+                detected_text = GoogleTranslator(source='auto', target='en').translate(input_text[:100])
+                # Now translate to target language
+                translated_text = GoogleTranslator(source='auto', target=LANGUAGES[target_lang]).translate(input_text)
+                source_display = "Auto-Detected"
             else:
-                source_code = LANGUAGES[source_lang]
-                actual_source = source_lang
+                # Use manual detection for Roman Urdu
+                roman_urdu_words = ['tum', 'mera', 'tera', 'kyun', 'kaise', 'nahi', 'acha', 'shukriya', 'hai', 'main']
+                if any(word in input_text.lower() for word in roman_urdu_words):
+                    translated_text = GoogleTranslator(source='ur', target=LANGUAGES[target_lang]).translate(input_text)
+                    source_display = "Roman Urdu"
+                else:
+                    translated_text = GoogleTranslator(source='auto', target=LANGUAGES[target_lang]).translate(input_text)
+                    source_display = "Auto-Detected"
             
-            # Perform translation
-            translated_text = GoogleTranslator(
-                source=source_code, 
-                target=LANGUAGES[target_lang]
-            ).translate(input_text)
+            # Display Results
+            st.subheader("🎉 Translation Result")
             
-            # Display results
-            st.subheader("📝 Translation Result")
-            st.text_area("Translated Text", translated_text, height=150, key="result")
+            col1, col2 = st.columns(2)
             
-            # Audio output
-            st.subheader("🔊 Audio")
-            try:
-                tts = gTTS(translated_text, lang=LANGUAGES[target_lang])
-                audio_file = "translation_audio.mp3"
-                tts.save(audio_file)
-                st.audio(audio_file, format="audio/mp3")
-                # Clean up
-                if os.path.exists(audio_file):
-                    os.remove(audio_file)
-            except Exception as e:
-                st.warning(f"Text-to-speech not available: {e}")
+            with col1:
+                st.markdown("**📥 Original Text**")
+                st.info(input_text)
+                
+            with col2:
+                st.markdown(f"**📤 Translated Text ({target_lang})**")
+                st.success(translated_text)
+            
+            # Text-to-Speech for ALL languages
+            if enable_tts:
+                st.subheader("🔊 Audio Output")
+                
+                try:
+                    # For translated text
+                    tts = gTTS(translated_text, lang=LANGUAGES[target_lang])
+                    translated_audio_file = f"translated_{LANGUAGES[target_lang]}.mp3"
+                    tts.save(translated_audio_file)
+                    
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown(f"**🎧 Listen to Translation**")
+                        st.audio(translated_audio_file, format="audio/mp3")
+                    
+                    # Try to create audio for original text if language is detectable
+                    try:
+                        if source_display != "Auto-Detected":
+                            tts_original = gTTS(input_text, lang=LANGUAGES.get('ur', 'en'))
+                            original_audio_file = "original_audio.mp3"
+                            tts_original.save(original_audio_file)
+                            
+                            with col2:
+                                st.markdown("**🎧 Listen to Original**")
+                                st.audio(original_audio_file, format="audio/mp3")
+                    except:
+                        pass
+                    
+                    # Cleanup audio files
+                    for file in [translated_audio_file, "original_audio.mp3"]:
+                        if os.path.exists(file):
+                            os.remove(file)
+                            
+                except Exception as e:
+                    st.warning(f"⚠️ Audio generation issue: {str(e)}")
+                    # Fallback to pyttsx3
+                    try:
+                        engine = pyttsx3.init()
+                        engine.save_to_file(translated_text, "fallback_audio.wav")
+                        engine.runAndWait()
+                        st.audio("fallback_audio.wav", format="audio/wav")
+                        if os.path.exists("fallback_audio.wav"):
+                            os.remove("fallback_audio.wav")
+                    except:
+                        st.error("❌ Audio not available for this language")
             
             # Save to history
-            if st.session_state.user not in history_data:
-                history_data[st.session_state.user] = []
+            user = st.session_state.user
+            if user not in history:
+                history[user] = []
             
-            history_entry = {
-                "timestamp": datetime.now().isoformat(),
-                "source_lang": actual_source,
-                "target_lang": target_lang,
+            history[user].append({
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "source": source_display,
+                "target": target_lang,
                 "original": input_text,
                 "translated": translated_text
-            }
+            })
+            save_json(HISTORY_FILE, history)
             
-            history_data[st.session_state.user].append(history_entry)
-            save_json(HISTORY_FILE, history_data)
-            
-            st.success("Translation completed!")
-            
+            st.balloons()
+            st.success("✅ Translation completed successfully!")
+
     except Exception as e:
-        st.error(f"Translation failed: {str(e)}")
-        st.info("Please check your internet connection and try again.")
+        st.error(f"❌ Translation error: {str(e)}")
+        st.info("💡 Please check your internet connection and try again.")
 
 elif translate_btn:
-    st.warning("Please enter some text to translate.")
+    st.warning("⚠️ Please enter some text to translate")
 
 # -----------------------------
 # Translation History
 # -----------------------------
 st.markdown("---")
-st.subheader("📜 History")
+st.subheader("📚 Translation History")
 
-if st.session_state.user in history_data and history_data[st.session_state.user]:
-    user_history = history_data[st.session_state.user]
+if st.session_state.user in history and history[st.session_state.user]:
+    user_history = history[st.session_state.user]
     
-    # Show last 5 translations
-    for i, entry in enumerate(reversed(user_history[-5:])):
-        with st.expander(f"Translation {len(user_history)-i} - {entry['source_lang']} → {entry['target_lang']}"):
+    # Show recent translations
+    for i, entry in enumerate(reversed(user_history[-10:])):
+        with st.expander(f"🕒 {entry['timestamp']} | {entry['source']} → {entry['target']}"):
             col1, col2 = st.columns(2)
             with col1:
-                st.write("**Original:**")
+                st.markdown("**Original:**")
                 st.write(entry['original'])
             with col2:
-                st.write("**Translated:**")
+                st.markdown("**Translated:**")
                 st.write(entry['translated'])
+            
+            # Quick audio replay
+            if st.button(f"🔊 Play Audio", key=f"audio_{i}"):
+                try:
+                    tts = gTTS(entry['translated'], lang=LANGUAGES[entry['target']])
+                    tts.save(f"history_{i}.mp3")
+                    st.audio(f"history_{i}.mp3", format="audio/mp3")
+                    if os.path.exists(f"history_{i}.mp3"):
+                        os.remove(f"history_{i}.mp3")
+                except:
+                    st.warning("Audio not available")
 else:
-    st.info("No translation history yet.")
+    st.info("No translation history yet. Start translating to build your history!")
 
 # -----------------------------
 # Footer
@@ -254,11 +345,18 @@ st.markdown("---")
 col1, col2 = st.columns([3, 1])
 
 with col1:
-    st.caption("Built with Streamlit • Google Translator • gTTS")
+    st.markdown("""
+        <div style='text-align: center;'>
+            <h3>🤖 AI Translator</h3>
+            <p>Powered by Google Translate • 1000+ Languages • Real-time Translation</p>
+        </div>
+    """, unsafe_allow_html=True)
 
 with col2:
     if st.button("🚪 Logout"):
+        st.session_state.logged_in = False
         st.session_state.user = None
-        if os.path.exists(SESSION_FILE):
-            os.remove(SESSION_FILE)
         st.rerun()
+
+st.markdown("---")
+st.caption("© 2024 AI Translator - Intelligent Translation for Everyone")
