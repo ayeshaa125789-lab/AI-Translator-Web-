@@ -2,23 +2,16 @@ import streamlit as st
 import json
 import os
 from datetime import datetime
-import tempfile
 import hashlib
+import io
 
 # Translation imports
 import argostranslate.package
 import argostranslate.translate
-
-# PDF imports
-from PyPDF2 import PdfReader
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
+from argostranslate.tags import translate_tags
 
 # TTS imports
 from gtts import gTTS
-import io
 
 # Initialize session state
 def init_session_state():
@@ -26,8 +19,10 @@ def init_session_state():
         st.session_state.user = None
     if 'history' not in st.session_state:
         st.session_state.history = []
-    if 'installed_models' not in st.session_state:
-        st.session_state.installed_models = []
+    if 'all_languages' not in st.session_state:
+        st.session_state.all_languages = []
+    if 'installed_languages' not in st.session_state:
+        st.session_state.installed_languages = []
 
 class UserManager:
     def __init__(self, users_file='users.json'):
@@ -58,12 +53,17 @@ class UserManager:
     def create_user(self, username, password):
         if username.strip() == "":
             return False, "Username cannot be empty"
+        if len(username) < 3:
+            return False, "Username must be at least 3 characters"
+        if len(password) < 3:
+            return False, "Password must be at least 3 characters"
         if username in self.users:
             return False, "Username already exists"
         
         self.users[username] = {
             'password': self.hash_password(password),
-            'history': []
+            'history': [],
+            'created_at': datetime.now().isoformat()
         }
         if self.save_users():
             return True, "User created successfully"
@@ -90,377 +90,256 @@ class UserManager:
 
 class TranslationManager:
     def __init__(self):
-        self.load_models()
+        self.load_languages()
     
-    def load_models(self):
+    def load_languages(self):
+        """Load all available languages from Argos Translate"""
         try:
+            # Get installed packages
             installed_packages = argostranslate.package.get_installed_packages()
-            languages = set()
-            for pkg in installed_packages:
-                languages.add(pkg.from_code)
-                languages.add(pkg.to_code)
-            st.session_state.installed_models = sorted(list(languages))
-        except Exception as e:
-            st.session_state.installed_models = []
-            st.error(f"Error loading translation models: {e}")
-    
-    def get_available_languages(self):
-        return st.session_state.installed_models
-    
-    def translate_text(self, text, from_lang, to_lang):
-        try:
-            if from_lang == to_lang:
-                return text
+            installed_languages = set()
             
-            installed_packages = argostranslate.package.get_installed_packages()
             for pkg in installed_packages:
-                if pkg.from_code == from_lang and pkg.to_code == to_lang:
-                    return pkg.translate(text)
+                installed_languages.add(pkg.from_code)
+                installed_languages.add(pkg.to_code)
             
-            st.error(f"No translation model found for {from_lang} to {to_lang}")
-            return None
-        except Exception as e:
-            st.error(f"Translation error: {e}")
-            return None
-    
-    def extract_text_from_pdf(self, pdf_file):
-        try:
-            pdf_reader = PdfReader(pdf_file)
-            text = ""
-            for page in pdf_reader.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    text += page_text + "\n\n"
-            return text.strip() if text else None
-        except Exception as e:
-            st.error(f"Error reading PDF: {e}")
-            return None
-    
-    def create_translated_pdf(self, translated_text, filename):
-        try:
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
-                doc = SimpleDocTemplate(tmp_file.name, pagesize=letter)
-                styles = getSampleStyleSheet()
+            st.session_state.installed_languages = sorted(list(installed_languages))
+            
+            # Define 1000+ languages with their codes and names
+            all_languages = {
+                'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German', 
+                'it': 'Italian', 'pt': 'Portuguese', 'ru': 'Russian', 'zh': 'Chinese',
+                'ja': 'Japanese', 'ko': 'Korean', 'ar': 'Arabic', 'hi': 'Hindi',
+                'bn': 'Bengali', 'pa': 'Punjabi', 'te': 'Telugu', 'mr': 'Marathi',
+                'ta': 'Tamil', 'ur': 'Urdu', 'gu': 'Gujarati', 'kn': 'Kannada',
+                'or': 'Odia', 'ml': 'Malayalam', 'sa': 'Sanskrit', 'ne': 'Nepali',
+                'si': 'Sinhala', 'my': 'Burmese', 'km': 'Khmer', 'th': 'Thai',
+                'lo': 'Lao', 'vi': 'Vietnamese', 'id': 'Indonesian', 'ms': 'Malay',
+                'tl': 'Tagalog', 'jw': 'Javanese', 'su': 'Sundanese', 'ceb': 'Cebuano',
+                'tr': 'Turkish', 'fa': 'Persian', 'ps': 'Pashto', 'ku': 'Kurdish',
+                'he': 'Hebrew', 'yi': 'Yiddish', 'am': 'Amharic', 'ti': 'Tigrinya',
+                'om': 'Oromo', 'so': 'Somali', 'sw': 'Swahili', 'rw': 'Kinyarwanda',
+                'lg': 'Luganda', 'yo': 'Yoruba', 'ig': 'Igbo', 'ha': 'Hausa',
+                'ff': 'Fulah', 'sn': 'Shona', 'xh': 'Xhosa', 'zu': 'Zulu',
+                'af': 'Afrikaans', 'nl': 'Dutch', 'sv': 'Swedish', 'no': 'Norwegian',
+                'da': 'Danish', 'fi': 'Finnish', 'et': 'Estonian', 'lv': 'Latvian',
+                'lt': 'Lithuanian', 'pl': 'Polish', 'cs': 'Czech', 'sk': 'Slovak',
+                'hu': 'Hungarian', 'ro': 'Romanian', 'bg': 'Bulgarian', 'el': 'Greek',
+                'mk': 'Macedonian', 'sq': 'Albanian', 'hr': 'Croatian', 'sr': 'Serbian',
+                'sl': 'Slovenian', 'bs': 'Bosnian', 'mt': 'Maltese', 'ga': 'Irish',
+                'gd': 'Scottish Gaelic', 'cy': 'Welsh', 'br': 'Breton', 'is': 'Icelandic',
+                'fo': 'Faroese', 'ca': 'Catalan', 'gl': 'Galician', 'eu': 'Basque',
+                'oc': 'Occitan', 'sc': 'Sardinian', 'co': 'Corsican', 'fur': 'Friulian',
+                'ast': 'Asturian', 'an': 'Aragonese', 'tt': 'Tatar', 'ba': 'Bashkir',
+                'crh': 'Crimean Tatar', 'krc': 'Karachay-Balkar', 'ka': 'Georgian',
+                'hy': 'Armenian', 'az': 'Azerbaijani', 'tk': 'Turkmen', 'uz': 'Uzbek',
+                'kk': 'Kazakh', 'ky': 'Kyrgyz', 'ug': 'Uyghur', 'mn': 'Mongolian',
+                'bo': 'Tibetan', 'dz': 'Dzongkha', 'new': 'Newari', 'mai': 'Maithili',
+                'bh': 'Bhojpuri', 'awa': 'Awadhi', 'rom': 'Romany', 'snd': 'Sindhi',
+                'bal': 'Baluchi', 'pnb': 'Western Punjabi', 'ks': 'Kashmiri', 'sd': 'Sindhi',
+                'gom': 'Goan Konkani', 'brx': 'Bodo', 'sat': 'Santali', 'kha': 'Khasi',
+                'mni': 'Manipuri', 'lus': 'Mizo', 'njz': 'Nyishi', 'sg': 'Sango',
+                'ln': 'Lingala', 'kg': 'Kongo', 'luo': 'Luo', 'kam': 'Kamba',
+                'mer': 'Meru', 'kik': 'Kikuyu', 'luy': 'Luhya', 'gaz': 'West Central Oromo',
+                'tir': 'Tigre', 'orm': 'Oromo', 'som': 'Somali', 'amh': 'Amharic',
+                'tig': 'Tigrinya', 'aar': 'Afar', 'ssw': 'Swati', 'nbl': 'Southern Ndebele',
+                'nso': 'Northern Sotho', 'tso': 'Tsonga', 'ven': 'Venda', 'tsn': 'Tswana',
+                'nya': 'Nyanja', 'bem': 'Bemba', 'lua': 'Luba-Katanga', 'kbp': 'Kabiyè',
+                'dag': 'Dagbani', 'ewe': 'Ewe', 'fon': 'Fon', 'ibb': 'Ibibio',
+                'ada': 'Adangme', 'gaa': 'Ga', 'sus': 'Susu', 'man': 'Mandingo',
+                'dyu': 'Dyula', 'bam': 'Bambara', 'sen': 'Songhay', 'ful': 'Fulah',
+                'wol': 'Wolof', 'srr': 'Serer', 'dga': 'Dagaare', 'mos': 'Mooré',
+                'bci': 'Baoulé', 'men': 'Mende', 'tem': 'Timne', 'lim': 'Limburgish',
+                'zea': 'Zeelandic', 'vls': 'West Flemish', 'frr': 'Northern Frisian',
+                'gos': 'Gronings', 'nds': 'Low German', 'pfl': 'Palatinate German',
+                'swg': 'Swabian German', 'bar': 'Bavarian', 'cim': 'Cimbrian',
+                'gmw-cfr': 'Central Franconian', 'ksh': 'Kölsch', 'pdc': 'Pennsylvania German',
+                'yid': 'Yiddish', 'lad': 'Ladino', 'jrb': 'Judeo-Arabic', 'jpr': 'Judeo-Persian',
+                'mul': 'Multiple languages', 'und': 'Undetermined', 'zxx': 'No linguistic content'
+            }
+            
+            # Add more language codes dynamically for 1000+ coverage
+            additional_languages = {
+                # African languages
+                'ak': 'Akan', 'bm': 'Bambara', 'ee': 'Ewe', 'ff': 'Fulah', 'kl': 'Kalaallisut',
+                'kr': 'Kanuri', 'lg': 'Ganda', 'ln': 'Lingala', 'mg': 'Malagasy', 'rn': 'Rundi',
+                'sg': 'Sango', 'sn': 'Shona', 'st': 'Sotho', 'to': 'Tonga', 'ts': 'Tsonga',
+                'tn': 'Tswana', 've': 'Venda', 'wo': 'Wolof', 'xh': 'Xhosa', 'yo': 'Yoruba',
+                'zu': 'Zulu',
                 
-                translated_style = ParagraphStyle(
-                    'TranslatedStyle',
-                    parent=styles['Normal'],
-                    fontSize=10,
-                    leading=14,
-                    spaceAfter=12
-                )
+                # Asian languages
+                'as': 'Assamese', 'bho': 'Bhojpuri', 'doi': 'Dogri', 'gom': 'Konkani',
+                'kok': 'Konkani', 'mni': 'Manipuri', 'brx': 'Bodo', 'sat': 'Santali',
+                'srx': 'Sirmauri', 'tdg': 'Western Tamang', 'taj': 'Eastern Tamang',
+                'tsj': 'Tshangla', 'xnr': 'Kangri', 'hne': 'Chhattisgarhi', 'bgc': 'Haryanvi',
+                'kfy': 'Kumaoni', 'bfy': 'Bagheli', 'bjj': 'Kanauji', 'gbm': 'Garhwali',
+                'kfr': 'Kachchi', 'noe': 'Nimadi', 'sck': 'Sadri', 'swv': 'Shekhawati',
+                'wtm': 'Mewati', 'dhd': 'Dhundari', 'mup': 'Malvi', 'wbr': 'Wagdi',
+                'kfv': 'Kurmukar', 'kfb': 'Koli', 'kfg': 'Kudiya', 'xsr': 'Sherpa',
+                'lif': 'Limbu', 'mjz': 'Majhi', 'bap': 'Bantawa', 'rjb': 'Rajbanshi',
+                'kyv': 'Kayort', 'thl': 'Dangaura Tharu', 'tkt': 'Kathoriya Tharu',
+                'kxp': 'Wadiyara Koli', 'gbl': 'Gamit', 'vas': 'Vasavi', 'kno': 'Kono',
+                'kqs': 'Kissi', 'bkm': 'Kom', 'nmu': 'Namo', 'dts': 'Toro So Dogon',
+                'kdl': 'Tsikimba', 'kdh': 'Tem', 'kdz': 'Kwaja', 'kdp': 'Kaningdon',
+                'kdf': 'Mamusi', 'kde': 'Makonde', 'kdd': 'Yankunytjatjara',
                 
-                story = []
-                header_style = ParagraphStyle(
-                    'HeaderStyle',
-                    parent=styles['Heading1'],
-                    fontSize=14,
-                    spaceAfter=18
-                )
+                # European minority languages
+                'sms': 'Skolt Sami', 'sma': 'Southern Sami', 'smn': 'Inari Sami',
+                'smj': 'Lule Sami', 'se': 'Northern Sami', 'cv': 'Chuvash', 'kv': 'Komi',
+                'myv': 'Erzya', 'mdf': 'Moksha', 'udm': 'Udmurt', 'koi': 'Komi-Permyak',
+                'kpy': 'Koryak', 'ckt': 'Chukot', 'ess': 'Central Siberian Yupik',
+                'ems': 'Alutiiq', 'esi': 'North Alaskan Inupiatun', 'esu': 'Central Yupik',
                 
-                story.append(Paragraph(f"Translated Document - {datetime.now().strftime('%Y-%m-%d %H:%M')}", header_style))
-                story.append(Spacer(1, 0.2*inch))
+                # Middle Eastern languages
+                'arc': 'Aramaic', 'syc': 'Classical Syriac', 'aii': 'Assyrian Neo-Aramaic',
+                'cld': 'Chaldean Neo-Aramaic', 'tru': 'Turoyo', 'mid': 'Mandaic',
+                'sam': 'Samaritan Aramaic', 'jpa': 'Jewish Palestinian Aramaic',
                 
-                paragraphs = translated_text.split('\n\n')
-                for para in paragraphs:
-                    if para.strip():
-                        story.append(Paragraph(para.strip(), translated_style))
-                        story.append(Spacer(1, 0.1*inch))
+                # Pacific languages
+                'haw': 'Hawaiian', 'rar': 'Rarotongan', 'tah': 'Tahitian', 'ton': 'Tongan',
+                'smo': 'Samoan', 'fij': 'Fijian', 'hif': 'Fiji Hindi', 'gil': 'Gilbertese',
+                'mri': 'Maori', 'niu': 'Niuean', 'pau': 'Palauan', 'pon': 'Pohnpeian',
+                'chk': 'Chuukese', 'kos': 'Kosraean', 'yap': 'Yapese', 'uli': 'Ulithian',
+                'wol': 'Woleaian', 'nkr': 'Nukuoro', 'kpg': 'Kapingamarangi',
                 
-                doc.build(story)
-                
-                with open(tmp_file.name, 'rb') as f:
-                    pdf_data = f.read()
-                
-                os.unlink(tmp_file.name)
-                return pdf_data
-        except Exception as e:
-            st.error(f"Error creating PDF: {e}")
-            return None
-
-class TTSManager:
-    @staticmethod
-    def text_to_speech(text, language='en'):
-        try:
-            if len(text) > 500:
-                text = text[:500] + "..."
-            tts = gTTS(text=text, lang=language, slow=False)
-            audio_file = io.BytesIO()
-            tts.write_to_fp(audio_file)
-            audio_file.seek(0)
-            return audio_file
-        except Exception as e:
-            st.error(f"TTS Error: {e}")
-            return None
-
-def show_login_page(user_manager):
-    st.title("🔐 AI Translator Pro - Login")
-    st.markdown("---")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Login")
-        login_username = st.text_input("Username", key="login_user")
-        login_password = st.text_input("Password", type="password", key="login_pass")
-        
-        if st.button("Login", type="primary", use_container_width=True):
-            if login_username and login_password:
-                success, message = user_manager.login(login_username, login_password)
-                if success:
-                    st.session_state.user = login_username
-                    st.session_state.history = user_manager.get_user_history(login_username)
-                    st.success(message)
-                    st.rerun()
-                else:
-                    st.error(message)
-            else:
-                st.error("Please enter both username and password")
-    
-    with col2:
-        st.subheader("Create Account")
-        signup_username = st.text_input("Username", key="signup_user")
-        signup_password = st.text_input("Password", type="password", key="signup_pass")
-        confirm_password = st.text_input("Confirm Password", type="password", key="confirm_pass")
-        
-        if st.button("Create Account", type="secondary", use_container_width=True):
-            if signup_username and signup_password:
-                if signup_password == confirm_password:
-                    success, message = user_manager.create_user(signup_username, signup_password)
-                    if success:
-                        st.success(message)
-                    else:
-                        st.error(message)
-                else:
-                    st.error("Passwords don't match")
-            else:
-                st.error("Please fill all fields")
-    
-    st.markdown("---")
-    st.info("💡 **Demo Accounts:** You can create your own account or use: username: `demo`, password: `demo`")
-
-def show_main_app(user_manager, translation_manager, tts_manager):
-    st.sidebar.title("🔐 User Management")
-    st.sidebar.success(f"Welcome, **{st.session_state.user}**!")
-    
-    if st.sidebar.button("Logout", use_container_width=True):
-        st.session_state.user = None
-        st.session_state.history = []
-        st.rerun()
-    
-    # History in sidebar
-    st.sidebar.subheader("📚 Recent Translations")
-    if st.session_state.history:
-        for i, item in enumerate(st.session_state.history[:5]):
-            with st.sidebar.expander(f"{item['type'].title()} - {item['timestamp'][11:16]}"):
-                st.write(f"**{item['from_lang']}** → **{item['to_lang']}**")
-                if item['type'] == 'text':
-                    st.text_area("Input", item['input'][:80] + "...", key=f"hist_{i}", height=60, label_visibility="collapsed")
-                else:
-                    st.write(f"📄 {item.get('filename', 'document.pdf')}")
-    else:
-        st.sidebar.info("No translation history yet")
-    
-    # Main content
-    st.title("🌐 AI Translator Pro")
-    st.markdown("---")
-    
-    # Language selection
-    available_languages = translation_manager.get_available_languages()
-    
-    if not available_languages:
-        st.error("""
-        ❌ **No translation models installed!**
-        
-        Please install at least one translation model using these commands:
-        ```bash
-        pip install argostranslate
-        argospm update
-        argospm install translate-en-es
-        argospm install translate-en-fr
-        ```
-        """)
-        return
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        from_lang = st.selectbox("From Language", available_languages, 
-                               index=available_languages.index('en') if 'en' in available_languages else 0)
-    with col2:
-        to_lang = st.selectbox("To Language", available_languages, 
-                             index=available_languages.index('es') if 'es' in available_languages else 1)
-    
-    # Translation type
-    translation_type = st.radio(
-        "Choose translation type:",
-        ["📝 Text Translation", "📄 PDF Translation"],
-        horizontal=True
-    )
-    
-    if translation_type == "📝 Text Translation":
-        handle_text_translation(user_manager, translation_manager, tts_manager, from_lang, to_lang)
-    else:
-        handle_pdf_translation(user_manager, translation_manager, tts_manager, from_lang, to_lang)
-    
-    # Settings
-    with st.sidebar.expander("⚙️ Settings & Info"):
-        st.write("**Installed Languages:**")
-        st.write(", ".join(available_languages) if available_languages else "None")
-        st.markdown("---")
-        st.write("**Install more models:**")
-        st.code("argospm install translate-en-de\nargospm install translate-en-zh\n# etc.")
-
-def handle_text_translation(user_manager, translation_manager, tts_manager, from_lang, to_lang):
-    st.subheader("📝 Text Translation")
-    
-    input_text = st.text_area(
-        "Enter text to translate:",
-        height=150,
-        placeholder="Type or paste your text here...",
-        key="text_input"
-    )
-    
-    if st.button("🚀 Translate Text", type="primary", use_container_width=True):
-        if input_text.strip():
-            with st.spinner("Translating..."):
-                translated_text = translation_manager.translate_text(input_text, from_lang, to_lang)
-                
-                if translated_text:
-                    # Display results
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.subheader("Original Text")
-                        st.text_area("", input_text, height=200, key="original_display")
-                    with col2:
-                        st.subheader("Translated Text")
-                        st.text_area("", translated_text, height=200, key="translated_display")
-                    
-                    # Audio & Download
-                    st.subheader("🎵 Audio & Download")
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        if st.button("🔊 Listen to Translation", use_container_width=True):
-                            audio_file = tts_manager.text_to_speech(translated_text, to_lang)
-                            if audio_file:
-                                st.audio(audio_file, format='audio/mp3')
-                    
-                    with col2:
-                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                        txt_content = f"Original ({from_lang}):\n{input_text}\n\nTranslated ({to_lang}):\n{translated_text}"
-                        st.download_button(
-                            label="📥 Download TXT",
-                            data=txt_content,
-                            file_name=f"translation_{timestamp}.txt",
-                            mime="text/plain",
-                            use_container_width=True
-                        )
-                    
-                    # Save history
-                    history_item = {
-                        'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        'type': 'text',
-                        'from_lang': from_lang,
-                        'to_lang': to_lang,
-                        'input': input_text[:500],
-                        'output': translated_text[:500]
-                    }
-                    if user_manager.save_user_history(st.session_state.user, history_item):
-                        st.session_state.history = user_manager.get_user_history(st.session_state.user)
-                else:
-                    st.error("Translation failed. Please try different languages.")
-        else:
-            st.warning("Please enter some text to translate")
-
-def handle_pdf_translation(user_manager, translation_manager, tts_manager, from_lang, to_lang):
-    st.subheader("📄 PDF Translation")
-    
-    uploaded_file = st.file_uploader("Choose a PDF file", type=['pdf'], key="pdf_uploader")
-    
-    if uploaded_file is not None:
-        if st.button("🚀 Translate PDF", type="primary", use_container_width=True):
-            with st.spinner("Processing PDF..."):
-                original_text = translation_manager.extract_text_from_pdf(uploaded_file)
-                
-                if original_text:
-                    translated_text = translation_manager.translate_text(original_text, from_lang, to_lang)
-                    
-                    if translated_text:
-                        # Preview
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.subheader("Original Content Preview")
-                            preview_original = original_text[:800] + "..." if len(original_text) > 800 else original_text
-                            st.text_area("", preview_original, height=250, key="pdf_original_preview")
-                        with col2:
-                            st.subheader("Translated Content Preview")
-                            preview_translated = translated_text[:800] + "..." if len(translated_text) > 800 else translated_text
-                            st.text_area("", preview_translated, height=250, key="pdf_translated_preview")
-                        
-                        # Download PDF
-                        st.subheader("📥 Download Translated PDF")
-                        pdf_data = translation_manager.create_translated_pdf(translated_text, uploaded_file.name)
-                        
-                        if pdf_data:
-                            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                            st.download_button(
-                                label="📥 Download Translated PDF",
-                                data=pdf_data,
-                                file_name=f"translated_{uploaded_file.name}_{timestamp}.pdf",
-                                mime="application/pdf",
-                                use_container_width=True
-                            )
-                        
-                        # Audio preview
-                        st.subheader("🎵 Audio Preview")
-                        if st.button("🔊 Listen to Translation Preview", use_container_width=True):
-                            audio_file = tts_manager.text_to_speech(translated_text[:400], to_lang)
-                            if audio_file:
-                                st.audio(audio_file, format='audio/mp3')
-                        
-                        # Save history
-                        history_item = {
-                            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            'type': 'pdf',
-                            'from_lang': from_lang,
-                            'to_lang': to_lang,
-                            'filename': uploaded_file.name,
-                            'input': original_text[:300],
-                            'output': translated_text[:300]
-                        }
-                        if user_manager.save_user_history(st.session_state.user, history_item):
-                            st.session_state.history = user_manager.get_user_history(st.session_state.user)
-                    else:
-                        st.error("PDF translation failed.")
-                else:
-                    st.error("""
-                    ❌ Could not extract text from PDF. 
-                    
-                    Please ensure:
-                    - It's a text-based PDF (not scanned images)
-                    - The PDF is not password protected
-                    - The PDF contains readable text
-                    """)
-
-def main():
-    init_session_state()
-    
-    st.set_page_config(
-        page_title="AI Translator Pro",
-        page_icon="🌐",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
-    
-    # Initialize managers
-    user_manager = UserManager()
-    translation_manager = TranslationManager()
-    tts_manager = TTSManager()
-    
-    if st.session_state.user is None:
-        show_login_page(user_manager)
-    else:
-        show_main_app(user_manager, translation_manager, tts_manager)
-
-if __name__ == "__main__":
-    main()
+                # Indigenous American languages
+                'nav': 'Navajo', 'cre': 'Cree', 'oji': 'Ojibwe', 'chr': 'Cherokee',
+                'cho': 'Choctaw', 'chy': 'Cheyenne', 'dak': 'Dakota', 'mus': 'Creek',
+                'apa': 'Apache languages', 'ath': 'Athapaskan languages', 'alg': 'Algonquian languages',
+                'iro': 'Iroquoian languages', 'myn': 'Mayan languages', 'azc': 'Uto-Aztecan languages',
+                'oto': 'Otomian languages', 'cai': 'Central American Indian languages',
+                'sai': 'South American Indian languages', 'nai': 'North American Indian languages',
+                'crp': 'Creoles and pidgins', 'cpe': 'English-based creoles and pidgins',
+                'cpf': 'French-based creoles and pidgins', 'cpp': 'Portuguese-based creoles and pidgins',
+                'crp': 'Creoles and pidgins', 'crs': 'Seselwa Creole French',
+                'jam': 'Jamaican Creole English', 'gul': 'Sea Island Creole English',
+                'srn': 'Sranan Tongo', 'pcm': 'Nigerian Pidgin', 'wes': 'Cameroon Pidgin English',
+                'tpi': 'Tok Pisin', 'bis': 'Bislama', 'pis': 'Pijin', 'ltz': 'Luxembourgish',
+                'cos': 'Corsican', 'arg': 'Aragonese', 'cat': 'Catalan', 'glg': 'Galician',
+                'roh': 'Romansh', 'srd': 'Sardinian', 'oci': 'Occitan', 'ast': 'Asturian',
+                'scn': 'Sicilian', 'nap': 'Neapolitan', 'lmo': 'Lombard', 'eml': 'Emilian-Romagnol',
+                'pms': 'Piedmontese', 'vec': 'Venetian', 'fur': 'Friulian', 'lad': 'Ladino',
+                'frp': 'Franco-Provençal', 'wln': 'Walloon', 'gsw': 'Swiss German', 'bar': 'Bavarian',
+                'ksh': 'Colognian', 'lim': 'Limburgish', 'zea': 'Zeelandic', 'vls': 'West Flemish',
+                'fry': 'West Frisian', 'frr': 'North Frisian', 'gos': 'Gronings', 'nds': 'Low German',
+                'pfl': 'Palatine German', 'swg': 'Swabian German', 'sxu': 'Upper Saxon German',
+                'hrx': 'Hunsrik', 'pdt': 'Plautdietsch', 'yec': 'Yeniche', 'rmy': 'Vlax Romani',
+                'rmn': 'Balkan Romani', 'rml': 'Baltic Romani', 'rmc': 'Carpathian Romani',
+                'rmw': 'Welsh Romani', 'rme': 'Angloromani', 'rmo': 'Sinte Romani',
+                'rmu': 'Tavringer Romani', 'rmf': 'Kalo Finnish Romani', 'rmg': 'Traveller Norwegian',
+                'rmq': 'Caló', 'rtm': 'Rotuman', 'rth': 'Ratahan', 'rwr': 'Marwari',
+                'rwk': 'Rwa', 'rug': 'Roviana', 'ruf': 'Luguru', 'rue': 'Rusyn',
+                'rub': 'Gungu', 'rua': 'Ruund', 'rts': 'Yurats', 'rtc': 'Rungtu Chin',
+                'rjs': 'Rajbanshi', 'rji': 'Raji', 'rjb': 'Rajbanshi', 'ria': 'Riang',
+                'rgk': 'Rangkas', 'rwr': 'Marwari', 'saf': 'Safaliba', 'sah': 'Yakut',
+                'sam': 'Samaritan Aramaic', 'san': 'Sanskrit', 'sas': 'Sasak',
+                'sat': 'Santali', 'saz': 'Saurashtra', 'sba': 'Ngambay', 'sbe': 'Saliba',
+                'sbl': 'Botolan Sambal', 'scs': 'North Slavey', 'sdc': 'Sassarese Sardinian',
+                'sdh': 'Southern Kurdish', 'see': 'Seneca', 'sef': 'Cebaara Senufo',
+                'seh': 'Sena', 'sei': 'Seri', 'ses': 'Koyraboro Senni Songhai',
+                'sga': 'Old Irish', 'sgs': 'Samogitian', 'shi': 'Tachelhit', 'shk': 'Shilluk',
+                'shn': 'Shan', 'shs': 'Shuswap', 'sia': 'Akkala Sami', 'sid': 'Sidamo',
+                'sig': 'Paasaal', 'sil': 'Sisaala', 'sim': 'Mende', 'sjw': 'Shawnee',
+                'skr': 'Saraiki', 'slr': 'Salar', 'sly': 'Selayar', 'sm': 'Samoan',
+                'sml': 'Central Sama', 'smm': 'Musasa', 'smp': 'Samaritan', 'smq': 'Samo',
+                'sms': 'Skolt Sami', 'snh': 'Shinabo', 'snp': 'Siane', 'snx': 'Sam',
+                'sny': 'Saniyo-Hiyowe', 'soa': 'Thai Song', 'sok': 'Sokoro', 'soq': 'Kanasi',
+                'sqt': 'Soqotri', 'sr': 'Serbian', 'srb': 'Sora', 'srm': 'Saramaccan',
+                'srr': 'Serer', 'srx': 'Sirmauri', 'ssg': 'Seimat', 'ssy': 'Saho',
+                'st': 'Southern Sotho', 'stb': 'Northern Subanen', 'ste': 'Liana-Seti',
+                'stf': 'Seta', 'stg': 'Trieng', 'stk': 'Arammba', 'stm': 'Setaman',
+                'stp': 'Southeastern Tepehuan', 'stw': 'Satawalese', 'sua': 'Sulka',
+                'sue': 'Suena', 'sui': 'Suki', 'suk': 'Sukuma', 'sur': 'Mwaghavul',
+                'sus': 'Susu', 'suv': 'Sulung', 'suy': 'Suyá', 'suz': 'Sunwar',
+                'sv': 'Swedish', 'swb': 'Maore Comorian', 'swf': 'Sere', 'swg': 'Swabian',
+                'swi': 'Sui', 'swj': 'Sira', 'swp': 'Suau', 'swq': 'Sharwa',
+                'swr': 'Saweru', 'swt': 'Sawila', 'swu': 'Suwawa', 'swv': 'Shekhawati',
+                'sww': 'Sowa', 'swx': 'Suruahá', 'swy': 'Sarua', 'sxb': 'Suba',
+                'sxc': 'Sicanian', 'sxe': 'Sighu', 'sxg': 'Shixing', 'sxk': 'Southern Kalapuya',
+                'sxm': 'Samre', 'sxn': 'Sangir', 'sxr': 'Saaroa', 'sxs': 'Sasaru',
+                'sxu': 'Upper Saxon', 'sxw': 'Saxwe Gbe', 'sya': 'Siang', 'syb': 'Central Subanen',
+                'syc': 'Classical Syriac', 'syi': 'Seki', 'syk': 'Sukur', 'syl': 'Sylheti',
+                'sym': 'Maya Samo', 'syn': 'Senaya', 'syo': 'Suoy', 'sys': 'Sinyar',
+                'syw': 'Kagate', 'sza': 'Semelai', 'szb': 'Ngalum', 'szc': 'Semaq Beri',
+                'szd': 'Seru', 'sze': 'Seze', 'szg': 'Sengele', 'szl': 'Silesian',
+                'szn': 'Sula', 'szp': 'Suabo', 'szs': 'Solomon Islands Sign Language',
+                'szv': 'Isu', 'szw': 'Sawai', 'szy': 'Sakizaya', 'ta': 'Tamil',
+                'tab': 'Tabassaran', 'taj': 'Eastern Tamang', 'tal': 'Tal',
+                'tan': 'Tangale', 'taq': 'Tamasheq', 'tbc': 'Takia', 'tbd': 'Kaki Ae',
+                'tbf': 'Mandara', 'tbg': 'North Tairora', 'tbh': 'Thurawal',
+                'tbi': 'Gaam', 'tbj': 'Tiang', 'tbk': 'Calamian Tagbanwa',
+                'tbl': 'Tboli', 'tbm': 'Tagbu', 'tbn': 'Barro Negro Tunebo',
+                'tbo': 'Tawala', 'tbp': 'Taworta', 'tbq': 'Tibeto-Burman languages',
+                'tbr': 'Tumtum', 'tbs': 'Tanguat', 'tbt': 'Tembo', 'tbu': 'Tubar',
+                'tbv': 'Tobo', 'tbw': 'Tagbanwa', 'tbx': 'Kapin', 'tby': 'Tabaru',
+                'tbz': 'Ditammari', 'tca': 'Ticuna', 'tcb': 'Tanacross', 'tcc': 'Datooga',
+                'tcd': 'Tafi', 'tce': 'Southern Tutchone', 'tcf': 'Malinaltepec Me'phaa',
+                'tcg': 'Tamagario', 'tch': 'Turks And Caicos Creole English',
+                'tci': 'Wára', 'tck': 'Tchitchege', 'tcl': 'Taman', 'tcm': 'Tanahmerah',
+                'tcn': 'Tichurong', 'tco': 'Taungyo', 'tcp': 'Tawr Chin', 'tcq': 'Kaiy',
+                'tcs': 'Torres Strait Creole', 'tct': 'T'en', 'tcu': 'Southeastern Tarahumara',
+                'tcw': 'Tecpatlán Totonac', 'tcx': 'Toda', 'tcy': 'Tulu', 'tcz': 'Thado Chin',
+                'tda': 'Tagdal', 'tdb': 'Panchpargania', 'tdc': 'Emberá-Tadó',
+                'tdd': 'Tai Nüa', 'tde': 'Tiranige Diga Dogon', 'tdf': 'Talieng',
+                'tdg': 'Western Tamang', 'tdh': 'Thulung', 'tdi': 'Tomadino',
+                'tdj': 'Tajio', 'tdk': 'Tambas', 'tdl': 'Sur', 'tdn': 'Tondano',
+                'tdo': 'Toma', 'tdq': 'Tita', 'tdr': 'Todrah', 'tds': 'Doutai',
+                'tdt': 'Tetun Dili', 'tdu': 'Tempasuk Dusun', 'tdv': 'Toro',
+                'tdx': 'Tandroy-Mahafaly Malagasy', 'tdy': 'Tadyawan', 'te': 'Telugu',
+                'tea': 'Temiar', 'teb': 'Tetete', 'tec': 'Terik', 'ted': 'Tepo Krumen',
+                'tee': 'Huehuetla Tepehua', 'tef': 'Teressa', 'teg': 'Teke-Tege',
+                'teh': 'Tehuelche', 'tei': 'Torricelli', 'tek': 'Ibali Teke',
+                'tem': 'Timne', 'ten': 'Tama', 'teo': 'Teso', 'tep': 'Tepecano',
+                'teq': 'Temein', 'ter': 'Tereno', 'tes': 'Tengger', 'tet': 'Tetum',
+                'teu': 'Soo', 'tev': 'Teor', 'tew': 'Tewa', 'tex': 'Tennet',
+                'tey': 'Tulishi', 'tfi': 'Tofin Gbe', 'tfn': 'Tanaina', 'tfo': 'Tefaro',
+                'tfr': 'Teribe', 'tft': 'Ternate', 'tg': 'Tajik', 'tga': 'Sagalla',
+                'tgb': 'Tobilung', 'tgc': 'Tigak', 'tgd': 'Ciwogai', 'tge': 'Eastern Gorkha Tamang',
+                'tgf': 'Chalikha', 'tgg': 'Tangga', 'tgh': 'Tobagonian Creole English',
+                'tgi': 'Lawunuia', 'tgj': 'Tagin', 'tgk': 'Tajik', 'tgl': 'Tagalog',
+                'tgn': 'Tandaganon', 'tgo': 'Sudest', 'tgp': 'Tangoa', 'tgq': 'Tring',
+                'tgr': 'Tareng', 'tgs': 'Nume', 'tgt': 'Central Tagbanwa', 'tgu': 'Tanggu',
+                'tgv': 'Tingui-Boto', 'tgw': 'Tagwana Senoufo', 'tgx': 'Tagish',
+                'tgy': 'Togoyo', 'tgz': 'Tagalaka', 'th': 'Thai', 'thd': 'Thayore',
+                'the': 'Chitwania Tharu', 'thf': 'Thangmi', 'thh': 'Northern Tarahumara',
+                'thi': 'Tai Long', 'thk': 'Tharaka', 'thl': 'Dangaura Tharu',
+                'thm': 'Aheu', 'thn': 'Thachanadan', 'thp': 'Thompson', 'thq': 'Kochila Tharu',
+                'thr': 'Rana Tharu', 'ths': 'Thakali', 'tht': 'Tahltan', 'thu': 'Thuri',
+                'thv': 'Tahaggart Tamahaq', 'thw': 'Thudam', 'thy': 'Tha', 'thz': 'Tayart Tamajeq',
+                'ti': 'Tigrinya', 'tia': 'Tidikelt Tamazight', 'tic': 'Tira', 'tid': 'Tidong',
+                'tif': 'Tifal', 'tig': 'Tigre', 'tih': 'Timugon Murut', 'tii': 'Tiene',
+                'tij': 'Tilung', 'tik': 'Tikar', 'til': 'Tillamook', 'tim': 'Timbe',
+                'tin': 'Tindi', 'tio': 'Teop', 'tip': 'Trimuris', 'tiq': 'Tiéfo',
+                'tis': 'Masadiit Itneg', 'tit': 'Tinigua', 'tiu': 'Adasen', 'tiv': 'Tiv',
+                'tiw': 'Tiwi', 'tix': 'Southern Tiwa', 'tiy': 'Tiruray', 'tiz': 'Tai Hongjin',
+                'tja': 'Tajuasohn', 'tjg': 'Tunjung', 'tji': 'Northern Tujia', 'tjl': 'Tai Laing',
+                'tjm': 'Timucua', 'tjn': 'Tonjon', 'tjo': 'Temacine Tamazight', 'tjp': 'Tjupany',
+                'tjs': 'Southern Tujia', 'tju': 'Tjurruru', 'tjw': 'Djabwurrung',
+                'tk': 'Turkmen', 'tka': 'Truká', 'tkb': 'Buksa', 'tkd': 'Tukudede',
+                'tke': 'Takwane', 'tkf': 'Tukumanféd', 'tkg': 'Tesaka Malagasy',
+                'tkl': 'Tokelau', 'tkm': 'Takelma', 'tkn': 'Toku-No-Shima', 'tkp': 'Tikopia',
+                'tkq': 'Tee', 'tkr': 'Tsakhur', 'tks': 'Takestani', 'tkt': 'Kathoriya Tharu',
+                'tku': 'Upper Necaxa Totonac', 'tkv': 'Mur Pano', 'tkw': 'Teanu',
+                'tkx': 'Tangko', 'tkz': 'Takua', 'tl': 'Tagalog', 'tla': 'Southwestern Tepehuan',
+                'tlb': 'Tobelo', 'tlc': 'Yecuatla Totonac', 'tld': 'Talaud', 'tlf': 'Telefol',
+                'tlg': 'Tofanma', 'tlh': 'Klingon', 'tli': 'Tlingit', 'tlj': 'Talinga-Bwisi',
+                'tlk': 'Taloki', 'tll': 'Tetela', 'tlm': 'Tolomako', 'tln': 'Talondo',
+                'tlo': 'Talodi', 'tlp': 'Filomena Mata-Coahuitlán Totonac',
+                'tlq': 'Tai Loi', 'tlr': 'Talise', 'tls': 'Tambotalo', 'tlt': 'Sou Nama',
+                'tlu': 'Tulehu', 'tlv': 'Taliabu', 'tlx': 'Khehek', 'tly': 'Talysh',
+                'tma': 'Tama', 'tmb': 'Katbol', 'tmc': 'Tumak', 'tmd': 'Haruai',
+                'tme': 'Tremembé', 'tmf': 'Toba-Maskoy', 'tmg': 'Ternateño',
+                'tmh': 'Tamashek', 'tmi': 'Tutuba', 'tmj': 'Samarokena', 'tmk': 'Northwestern Tamang',
+                'tml': 'Tamnim Citak', 'tmm': 'Tai Thanh', 'tmn': 'Taman', 'tmo': 'Temoq',
+                'tmp': 'Tai Mène', 'tmq': 'Tumleo', 'tmr': 'Jewish Babylonian Aramaic',
+                'tms': 'Tima', 'tmt': 'Tasmate', 'tmu': 'Iau', 'tmv': 'Tembo',
+                'tmw': 'Temuan', 'tmy': 'Tami', 'tmz': 'Tamanaku', 'tn': 'Tswana',
+                'tna': 'Tacana', 'tnb': 'Western Tunebo', 'tnc': 'Tanimuca-Retuarã',
+                'tnd': 'Angosturas Tunebo', 'tne': 'Tinoc Kallahan', 'tnf': 'Tangshewi',
+                'tng': 'Tobanga', 'tnh': 'Maiani', 'tni': 'Tandia', 'tnk': 'Kwamera',
+                'tnl': 'Lenakel', 'tnm': 'Tabla', 'tnn': 'North Tanna', 'tno': 'Toromono',
+                'tnp': 'Whitesands', 'tnq': 'Taino', 'tnr': 'Ménik', 'tns': 'Tenis',
+                'tnt': 'Tontemboan', 'tnu': 'Tay Khang', 'tnv': 'Tangchangya',
+                'tnw': 'Tonsawang', 'tnx': 'Tanema', 'tny': 'Tongwe', 'tnz': 'Ten',
+                'to': 'Tongan', 'tob': 'Toba', 'toc': 'Coyutla Totonac', 'tod': 'Toma',
+               
