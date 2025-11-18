@@ -1,108 +1,158 @@
 import streamlit as st
 import requests
-from gtts import gTTS
-import base64
+import json
 import os
-from datetime import datetime
+from gtts import gTTS
+import uuid
 
-# -----------------------------------------------------
-# 🌍 LibreTranslate API (Unlimited Request, No Signup)
-# -----------------------------------------------------
-API_URL = "https://libretranslate.de/translate"
-
-# -----------------------------------------------------
-# Supported Languages (More than 1000+ through LibreTranslate)
-# -----------------------------------------------------
-languages = {
-    "English": "en", "Urdu": "ur", "Arabic": "ar", "Chinese": "zh",
-    "Hindi": "hi", "French": "fr", "German": "de", "Spanish": "es",
-    "Italian": "it", "Korean": "ko", "Japanese": "ja", "Russian": "ru",
-    "Turkish": "tr", "Persian": "fa", "Pashto": "ps", "Punjabi": "pa"
-}
-
-# -----------------------------------------------------
-# History Storage
-# -----------------------------------------------------
-def save_history(src, dest, original, translated):
-    with open("history.txt", "a", encoding="utf-8") as f:
-        f.write(
-            f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]\n"
-            f"From: {src} → To: {dest}\n"
-            f"Original: {original}\n"
-            f"Translated: {translated}\n"
-            f"{'-'*40}\n"
-        )
-
-def load_history():
-    if os.path.exists("history.txt"):
-        with open("history.txt", "r", encoding="utf-8") as f:
-            return f.read()
-    return "No history yet."
+# -------------------------------
+# CONFIG
+# -------------------------------
+API_URL = "https://libretranslate.com/translate"
+LANG_URL = "https://libretranslate.com/languages"
+HISTORY_FILE = "history.json"
+USERS_FILE = "users.json"
 
 
-# -----------------------------------------------------
-# Translation Function
-# -----------------------------------------------------
-def translate_text(text, source, target):
+# -------------------------------
+# LOAD / SAVE JSON
+# -------------------------------
+def load_json(path, default):
+    if os.path.exists(path):
+        with open(path, "r") as f:
+            return json.load(f)
+    return default
+
+def save_json(path, data):
+    with open(path, "w") as f:
+        json.dump(data, f, indent=4)
+
+
+# -------------------------------
+# AUTH SYSTEM
+# -------------------------------
+def signup(username, password):
+    users = load_json(USERS_FILE, {})
+
+    if username in users:
+        return False, "User already exists."
+
+    users[username] = password
+    save_json(USERS_FILE, users)
+    return True, "Signup successful!"
+
+
+def login(username, password):
+    users = load_json(USERS_FILE, {})
+    return users.get(username) == password
+
+
+# -------------------------------
+# TRANSLATE TEXT (1000+ LANGS)
+# -------------------------------
+def translate(text, src_lang, tgt_lang):
     payload = {
         "q": text,
-        "source": source,
-        "target": target,
+        "source": src_lang,
+        "target": tgt_lang,
         "format": "text"
     }
-    response = requests.post(API_URL, data=payload)
-    return response.json()["translatedText"]
 
-# -----------------------------------------------------
-# Text-to-Speech
-# -----------------------------------------------------
-def text_to_speech(text, lang_code):
-    tts = gTTS(text=text, lang=lang_code)
-    audio_file = "speech.mp3"
-    tts.save(audio_file)
-    return audio_file
+    try:
+        r = requests.post(API_URL, json=payload)
+        return r.json()["translatedText"]
+    except:
+        return "Translation error."
 
-# -----------------------------------------------------
-# 🎨 Streamlit UI
-# -----------------------------------------------------
-st.title("🌍 Ultra Translator + Text to Speech")
-st.write("Translate instantly in 1000+ languages + audio output.")
 
-# User Inputs
-input_text = st.text_area("Enter your text:", height=150)
+# -------------------------------
+# TEXT TO SPEECH
+# -------------------------------
+def generate_tts(text):
+    file = f"tts_{uuid.uuid4().hex}.mp3"
+    tts = gTTS(text)
+    tts.save(file)
+    return file
 
-col1, col2 = st.columns(2)
-with col1:
-    src_lang = st.selectbox("From Language", list(languages.keys()))
-with col2:
-    dest_lang = st.selectbox("To Language", list(languages.keys()))
 
-if st.button("Translate"):
-    if input_text.strip() == "":
-        st.warning("Please enter some text!")
-    else:
-        translated = translate_text(input_text, languages[src_lang], languages[dest_lang])
-        st.success("Translation successful!")
-        st.text_area("Translated Text:", translated, height=150)
+# -------------------------------
+# HISTORY SYSTEM
+# -------------------------------
+def add_history(user, original, translated, src, tgt):
+    history = load_json(HISTORY_FILE, {})
+    
+    if user not in history:
+        history[user] = []
 
-        save_history(src_lang, dest_lang, input_text, translated)
+    history[user].append({
+        "source_lang": src,
+        "target_lang": tgt,
+        "original": original,
+        "translated": translated
+    })
 
-        # Download button for text
-        st.download_button(
-            label="Download Translation (.txt)",
-            data=translated,
-            file_name="translation.txt"
-        )
+    save_json(HISTORY_FILE, history)
 
-        # Text to Speech
-        st.subheader("🔊 Text to Speech")
-        audio_path = text_to_speech(translated, languages[dest_lang])
-        audio_bytes = open(audio_path, "rb").read()
-        st.audio(audio_bytes, format="audio/mp3")
 
-# -----------------------------------------------------
-# History Section
-# -----------------------------------------------------
-st.subheader("📜 Translation History")
-history_data = load_history()
-st.text_area("History:", history_data, height=250)
+# -------------------------------
+# UI
+# -------------------------------
+st.title("🌍 AI Translator (1000+ Languages, TTS, Login, History)")
+
+menu = st.sidebar.selectbox("Menu", ["Login", "Signup"])
+
+if menu == "Signup":
+    name = st.text_input("Create Username")
+    pwd = st.text_input("Create Password", type="password")
+
+    if st.button("Signup"):
+        ok, msg = signup(name, pwd)
+        st.info(msg)
+
+elif menu == "Login":
+    name = st.text_input("Username")
+    pwd = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+        if login(name, pwd):
+            st.success("Login success!")
+            st.session_state["user"] = name
+        else:
+            st.error("Wrong username or password.")
+
+# After login
+if "user" in st.session_state:
+
+    st.subheader("Translate Text")
+
+    # load languages
+    langs = requests.get(LANG_URL).json()
+    lang_dict = {l["name"]: l["code"] for l in langs}
+
+    src = st.selectbox("Source Language", list(lang_dict.keys()))
+    tgt = st.selectbox("Target Language", list(lang_dict.keys()))
+
+    text = st.text_area("Enter Text")
+
+    if st.button("Translate"):
+        result = translate(text, lang_dict[src], lang_dict[tgt])
+        st.success(result)
+
+        # Add history
+        add_history(st.session_state["user"], text, result, src, tgt)
+
+        # TTS
+        audio_file = generate_tts(result)
+        st.audio(audio_file)
+
+    st.subheader("Your History")
+
+    history = load_json(HISTORY_FILE, {})
+    user_hist = history.get(st.session_state["user"], [])
+
+    for item in user_hist:
+        st.write("🔹 **From:**", item["source_lang"])
+        st.write("🔸 **To:**", item["target_lang"])
+        st.write("**Original:**", item["original"])
+        st.write("**Translated:**", item["translated"])
+        st.markdown("---")
