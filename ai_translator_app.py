@@ -8,7 +8,6 @@ import io
 # Translation imports
 import argostranslate.package
 import argostranslate.translate
-from argostranslate.tags import translate_tags
 
 # TTS imports
 from gtts import gTTS
@@ -19,8 +18,6 @@ def init_session_state():
         st.session_state.user = None
     if 'history' not in st.session_state:
         st.session_state.history = []
-    if 'all_languages' not in st.session_state:
-        st.session_state.all_languages = []
     if 'installed_languages' not in st.session_state:
         st.session_state.installed_languages = []
 
@@ -90,256 +87,338 @@ class UserManager:
 
 class TranslationManager:
     def __init__(self):
-        self.load_languages()
+        self.load_installed_languages()
     
-    def load_languages(self):
-        """Load all available languages from Argos Translate"""
+    def load_installed_languages(self):
+        """Load installed languages from Argos Translate packages"""
         try:
-            # Get installed packages
             installed_packages = argostranslate.package.get_installed_packages()
-            installed_languages = set()
+            languages = set()
             
             for pkg in installed_packages:
-                installed_languages.add(pkg.from_code)
-                installed_languages.add(pkg.to_code)
+                languages.add((pkg.from_code, self.get_language_name(pkg.from_code)))
+                languages.add((pkg.to_code, self.get_language_name(pkg.to_code)))
             
-            st.session_state.installed_languages = sorted(list(installed_languages))
+            # Convert to list and sort by language name
+            languages_list = sorted(list(languages), key=lambda x: x[1])
+            st.session_state.installed_languages = languages_list
             
-            # Define 1000+ languages with their codes and names
-            all_languages = {
-                'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German', 
-                'it': 'Italian', 'pt': 'Portuguese', 'ru': 'Russian', 'zh': 'Chinese',
-                'ja': 'Japanese', 'ko': 'Korean', 'ar': 'Arabic', 'hi': 'Hindi',
-                'bn': 'Bengali', 'pa': 'Punjabi', 'te': 'Telugu', 'mr': 'Marathi',
-                'ta': 'Tamil', 'ur': 'Urdu', 'gu': 'Gujarati', 'kn': 'Kannada',
-                'or': 'Odia', 'ml': 'Malayalam', 'sa': 'Sanskrit', 'ne': 'Nepali',
-                'si': 'Sinhala', 'my': 'Burmese', 'km': 'Khmer', 'th': 'Thai',
-                'lo': 'Lao', 'vi': 'Vietnamese', 'id': 'Indonesian', 'ms': 'Malay',
-                'tl': 'Tagalog', 'jw': 'Javanese', 'su': 'Sundanese', 'ceb': 'Cebuano',
-                'tr': 'Turkish', 'fa': 'Persian', 'ps': 'Pashto', 'ku': 'Kurdish',
-                'he': 'Hebrew', 'yi': 'Yiddish', 'am': 'Amharic', 'ti': 'Tigrinya',
-                'om': 'Oromo', 'so': 'Somali', 'sw': 'Swahili', 'rw': 'Kinyarwanda',
-                'lg': 'Luganda', 'yo': 'Yoruba', 'ig': 'Igbo', 'ha': 'Hausa',
-                'ff': 'Fulah', 'sn': 'Shona', 'xh': 'Xhosa', 'zu': 'Zulu',
-                'af': 'Afrikaans', 'nl': 'Dutch', 'sv': 'Swedish', 'no': 'Norwegian',
-                'da': 'Danish', 'fi': 'Finnish', 'et': 'Estonian', 'lv': 'Latvian',
-                'lt': 'Lithuanian', 'pl': 'Polish', 'cs': 'Czech', 'sk': 'Slovak',
-                'hu': 'Hungarian', 'ro': 'Romanian', 'bg': 'Bulgarian', 'el': 'Greek',
-                'mk': 'Macedonian', 'sq': 'Albanian', 'hr': 'Croatian', 'sr': 'Serbian',
-                'sl': 'Slovenian', 'bs': 'Bosnian', 'mt': 'Maltese', 'ga': 'Irish',
-                'gd': 'Scottish Gaelic', 'cy': 'Welsh', 'br': 'Breton', 'is': 'Icelandic',
-                'fo': 'Faroese', 'ca': 'Catalan', 'gl': 'Galician', 'eu': 'Basque',
-                'oc': 'Occitan', 'sc': 'Sardinian', 'co': 'Corsican', 'fur': 'Friulian',
-                'ast': 'Asturian', 'an': 'Aragonese', 'tt': 'Tatar', 'ba': 'Bashkir',
-                'crh': 'Crimean Tatar', 'krc': 'Karachay-Balkar', 'ka': 'Georgian',
-                'hy': 'Armenian', 'az': 'Azerbaijani', 'tk': 'Turkmen', 'uz': 'Uzbek',
-                'kk': 'Kazakh', 'ky': 'Kyrgyz', 'ug': 'Uyghur', 'mn': 'Mongolian',
-                'bo': 'Tibetan', 'dz': 'Dzongkha', 'new': 'Newari', 'mai': 'Maithili',
-                'bh': 'Bhojpuri', 'awa': 'Awadhi', 'rom': 'Romany', 'snd': 'Sindhi',
-                'bal': 'Baluchi', 'pnb': 'Western Punjabi', 'ks': 'Kashmiri', 'sd': 'Sindhi',
-                'gom': 'Goan Konkani', 'brx': 'Bodo', 'sat': 'Santali', 'kha': 'Khasi',
-                'mni': 'Manipuri', 'lus': 'Mizo', 'njz': 'Nyishi', 'sg': 'Sango',
-                'ln': 'Lingala', 'kg': 'Kongo', 'luo': 'Luo', 'kam': 'Kamba',
-                'mer': 'Meru', 'kik': 'Kikuyu', 'luy': 'Luhya', 'gaz': 'West Central Oromo',
-                'tir': 'Tigre', 'orm': 'Oromo', 'som': 'Somali', 'amh': 'Amharic',
-                'tig': 'Tigrinya', 'aar': 'Afar', 'ssw': 'Swati', 'nbl': 'Southern Ndebele',
-                'nso': 'Northern Sotho', 'tso': 'Tsonga', 'ven': 'Venda', 'tsn': 'Tswana',
-                'nya': 'Nyanja', 'bem': 'Bemba', 'lua': 'Luba-Katanga', 'kbp': 'Kabiyè',
-                'dag': 'Dagbani', 'ewe': 'Ewe', 'fon': 'Fon', 'ibb': 'Ibibio',
-                'ada': 'Adangme', 'gaa': 'Ga', 'sus': 'Susu', 'man': 'Mandingo',
-                'dyu': 'Dyula', 'bam': 'Bambara', 'sen': 'Songhay', 'ful': 'Fulah',
-                'wol': 'Wolof', 'srr': 'Serer', 'dga': 'Dagaare', 'mos': 'Mooré',
-                'bci': 'Baoulé', 'men': 'Mende', 'tem': 'Timne', 'lim': 'Limburgish',
-                'zea': 'Zeelandic', 'vls': 'West Flemish', 'frr': 'Northern Frisian',
-                'gos': 'Gronings', 'nds': 'Low German', 'pfl': 'Palatinate German',
-                'swg': 'Swabian German', 'bar': 'Bavarian', 'cim': 'Cimbrian',
-                'gmw-cfr': 'Central Franconian', 'ksh': 'Kölsch', 'pdc': 'Pennsylvania German',
-                'yid': 'Yiddish', 'lad': 'Ladino', 'jrb': 'Judeo-Arabic', 'jpr': 'Judeo-Persian',
-                'mul': 'Multiple languages', 'und': 'Undetermined', 'zxx': 'No linguistic content'
-            }
+            return languages_list
+        except Exception as e:
+            st.error(f"Error loading languages: {e}")
+            return []
+    
+    def get_language_name(self, code):
+        """Get language name from code"""
+        language_names = {
+            'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
+            'it': 'Italian', 'pt': 'Portuguese', 'ru': 'Russian', 'zh': 'Chinese',
+            'ja': 'Japanese', 'ko': 'Korean', 'ar': 'Arabic', 'hi': 'Hindi',
+            'bn': 'Bengali', 'pa': 'Punjabi', 'te': 'Telugu', 'mr': 'Marathi',
+            'ta': 'Tamil', 'ur': 'Urdu', 'gu': 'Gujarati', 'kn': 'Kannada',
+            'ml': 'Malayalam', 'th': 'Thai', 'vi': 'Vietnamese', 'tr': 'Turkish',
+            'pl': 'Polish', 'uk': 'Ukrainian', 'ro': 'Romanian', 'nl': 'Dutch',
+            'sv': 'Swedish', 'da': 'Danish', 'no': 'Norwegian', 'fi': 'Finnish',
+            'he': 'Hebrew', 'id': 'Indonesian', 'ms': 'Malay', 'fil': 'Filipino',
+            'cs': 'Czech', 'hu': 'Hungarian', 'el': 'Greek', 'bg': 'Bulgarian',
+            'sr': 'Serbian', 'hr': 'Croatian', 'sk': 'Slovak', 'sl': 'Slovenian',
+            'lt': 'Lithuanian', 'lv': 'Latvian', 'et': 'Estonian', 'mt': 'Maltese',
+            'ga': 'Irish', 'cy': 'Welsh', 'is': 'Icelandic', 'sq': 'Albanian',
+            'mk': 'Macedonian', 'bs': 'Bosnian', 'ca': 'Catalan', 'eu': 'Basque',
+            'gl': 'Galician', 'af': 'Afrikaans', 'sw': 'Swahili', 'zu': 'Zulu',
+            'xh': 'Xhosa', 'yo': 'Yoruba', 'ig': 'Igbo', 'ha': 'Hausa',
+            'so': 'Somali', 'am': 'Amharic', 'ti': 'Tigrinya', 'om': 'Oromo',
+            'fa': 'Persian', 'ps': 'Pashto', 'ku': 'Kurdish', 'sd': 'Sindhi',
+            'ne': 'Nepali', 'si': 'Sinhala', 'my': 'Burmese', 'km': 'Khmer',
+            'lo': 'Lao', 'ka': 'Georgian', 'hy': 'Armenian', 'az': 'Azerbaijani',
+            'kk': 'Kazakh', 'uz': 'Uzbek', 'tk': 'Turkmen', 'ky': 'Kyrgyz',
+            'tg': 'Tajik', 'mn': 'Mongolian', 'bo': 'Tibetan', 'dz': 'Dzongkha'
+        }
+        return language_names.get(code, code.upper())
+    
+    def get_available_languages(self):
+        """Get available languages as (code, name) pairs"""
+        if not st.session_state.installed_languages:
+            return self.load_installed_languages()
+        return st.session_state.installed_languages
+    
+    def translate_text(self, text, from_lang, to_lang):
+        """Translate text using Argos Translate"""
+        try:
+            if from_lang == to_lang:
+                return text
             
-            # Add more language codes dynamically for 1000+ coverage
-            additional_languages = {
-                # African languages
-                'ak': 'Akan', 'bm': 'Bambara', 'ee': 'Ewe', 'ff': 'Fulah', 'kl': 'Kalaallisut',
-                'kr': 'Kanuri', 'lg': 'Ganda', 'ln': 'Lingala', 'mg': 'Malagasy', 'rn': 'Rundi',
-                'sg': 'Sango', 'sn': 'Shona', 'st': 'Sotho', 'to': 'Tonga', 'ts': 'Tsonga',
-                'tn': 'Tswana', 've': 'Venda', 'wo': 'Wolof', 'xh': 'Xhosa', 'yo': 'Yoruba',
-                'zu': 'Zulu',
-                
-                # Asian languages
-                'as': 'Assamese', 'bho': 'Bhojpuri', 'doi': 'Dogri', 'gom': 'Konkani',
-                'kok': 'Konkani', 'mni': 'Manipuri', 'brx': 'Bodo', 'sat': 'Santali',
-                'srx': 'Sirmauri', 'tdg': 'Western Tamang', 'taj': 'Eastern Tamang',
-                'tsj': 'Tshangla', 'xnr': 'Kangri', 'hne': 'Chhattisgarhi', 'bgc': 'Haryanvi',
-                'kfy': 'Kumaoni', 'bfy': 'Bagheli', 'bjj': 'Kanauji', 'gbm': 'Garhwali',
-                'kfr': 'Kachchi', 'noe': 'Nimadi', 'sck': 'Sadri', 'swv': 'Shekhawati',
-                'wtm': 'Mewati', 'dhd': 'Dhundari', 'mup': 'Malvi', 'wbr': 'Wagdi',
-                'kfv': 'Kurmukar', 'kfb': 'Koli', 'kfg': 'Kudiya', 'xsr': 'Sherpa',
-                'lif': 'Limbu', 'mjz': 'Majhi', 'bap': 'Bantawa', 'rjb': 'Rajbanshi',
-                'kyv': 'Kayort', 'thl': 'Dangaura Tharu', 'tkt': 'Kathoriya Tharu',
-                'kxp': 'Wadiyara Koli', 'gbl': 'Gamit', 'vas': 'Vasavi', 'kno': 'Kono',
-                'kqs': 'Kissi', 'bkm': 'Kom', 'nmu': 'Namo', 'dts': 'Toro So Dogon',
-                'kdl': 'Tsikimba', 'kdh': 'Tem', 'kdz': 'Kwaja', 'kdp': 'Kaningdon',
-                'kdf': 'Mamusi', 'kde': 'Makonde', 'kdd': 'Yankunytjatjara',
-                
-                # European minority languages
-                'sms': 'Skolt Sami', 'sma': 'Southern Sami', 'smn': 'Inari Sami',
-                'smj': 'Lule Sami', 'se': 'Northern Sami', 'cv': 'Chuvash', 'kv': 'Komi',
-                'myv': 'Erzya', 'mdf': 'Moksha', 'udm': 'Udmurt', 'koi': 'Komi-Permyak',
-                'kpy': 'Koryak', 'ckt': 'Chukot', 'ess': 'Central Siberian Yupik',
-                'ems': 'Alutiiq', 'esi': 'North Alaskan Inupiatun', 'esu': 'Central Yupik',
-                
-                # Middle Eastern languages
-                'arc': 'Aramaic', 'syc': 'Classical Syriac', 'aii': 'Assyrian Neo-Aramaic',
-                'cld': 'Chaldean Neo-Aramaic', 'tru': 'Turoyo', 'mid': 'Mandaic',
-                'sam': 'Samaritan Aramaic', 'jpa': 'Jewish Palestinian Aramaic',
-                
-                # Pacific languages
-                'haw': 'Hawaiian', 'rar': 'Rarotongan', 'tah': 'Tahitian', 'ton': 'Tongan',
-                'smo': 'Samoan', 'fij': 'Fijian', 'hif': 'Fiji Hindi', 'gil': 'Gilbertese',
-                'mri': 'Maori', 'niu': 'Niuean', 'pau': 'Palauan', 'pon': 'Pohnpeian',
-                'chk': 'Chuukese', 'kos': 'Kosraean', 'yap': 'Yapese', 'uli': 'Ulithian',
-                'wol': 'Woleaian', 'nkr': 'Nukuoro', 'kpg': 'Kapingamarangi',
-                
-                # Indigenous American languages
-                'nav': 'Navajo', 'cre': 'Cree', 'oji': 'Ojibwe', 'chr': 'Cherokee',
-                'cho': 'Choctaw', 'chy': 'Cheyenne', 'dak': 'Dakota', 'mus': 'Creek',
-                'apa': 'Apache languages', 'ath': 'Athapaskan languages', 'alg': 'Algonquian languages',
-                'iro': 'Iroquoian languages', 'myn': 'Mayan languages', 'azc': 'Uto-Aztecan languages',
-                'oto': 'Otomian languages', 'cai': 'Central American Indian languages',
-                'sai': 'South American Indian languages', 'nai': 'North American Indian languages',
-                'crp': 'Creoles and pidgins', 'cpe': 'English-based creoles and pidgins',
-                'cpf': 'French-based creoles and pidgins', 'cpp': 'Portuguese-based creoles and pidgins',
-                'crp': 'Creoles and pidgins', 'crs': 'Seselwa Creole French',
-                'jam': 'Jamaican Creole English', 'gul': 'Sea Island Creole English',
-                'srn': 'Sranan Tongo', 'pcm': 'Nigerian Pidgin', 'wes': 'Cameroon Pidgin English',
-                'tpi': 'Tok Pisin', 'bis': 'Bislama', 'pis': 'Pijin', 'ltz': 'Luxembourgish',
-                'cos': 'Corsican', 'arg': 'Aragonese', 'cat': 'Catalan', 'glg': 'Galician',
-                'roh': 'Romansh', 'srd': 'Sardinian', 'oci': 'Occitan', 'ast': 'Asturian',
-                'scn': 'Sicilian', 'nap': 'Neapolitan', 'lmo': 'Lombard', 'eml': 'Emilian-Romagnol',
-                'pms': 'Piedmontese', 'vec': 'Venetian', 'fur': 'Friulian', 'lad': 'Ladino',
-                'frp': 'Franco-Provençal', 'wln': 'Walloon', 'gsw': 'Swiss German', 'bar': 'Bavarian',
-                'ksh': 'Colognian', 'lim': 'Limburgish', 'zea': 'Zeelandic', 'vls': 'West Flemish',
-                'fry': 'West Frisian', 'frr': 'North Frisian', 'gos': 'Gronings', 'nds': 'Low German',
-                'pfl': 'Palatine German', 'swg': 'Swabian German', 'sxu': 'Upper Saxon German',
-                'hrx': 'Hunsrik', 'pdt': 'Plautdietsch', 'yec': 'Yeniche', 'rmy': 'Vlax Romani',
-                'rmn': 'Balkan Romani', 'rml': 'Baltic Romani', 'rmc': 'Carpathian Romani',
-                'rmw': 'Welsh Romani', 'rme': 'Angloromani', 'rmo': 'Sinte Romani',
-                'rmu': 'Tavringer Romani', 'rmf': 'Kalo Finnish Romani', 'rmg': 'Traveller Norwegian',
-                'rmq': 'Caló', 'rtm': 'Rotuman', 'rth': 'Ratahan', 'rwr': 'Marwari',
-                'rwk': 'Rwa', 'rug': 'Roviana', 'ruf': 'Luguru', 'rue': 'Rusyn',
-                'rub': 'Gungu', 'rua': 'Ruund', 'rts': 'Yurats', 'rtc': 'Rungtu Chin',
-                'rjs': 'Rajbanshi', 'rji': 'Raji', 'rjb': 'Rajbanshi', 'ria': 'Riang',
-                'rgk': 'Rangkas', 'rwr': 'Marwari', 'saf': 'Safaliba', 'sah': 'Yakut',
-                'sam': 'Samaritan Aramaic', 'san': 'Sanskrit', 'sas': 'Sasak',
-                'sat': 'Santali', 'saz': 'Saurashtra', 'sba': 'Ngambay', 'sbe': 'Saliba',
-                'sbl': 'Botolan Sambal', 'scs': 'North Slavey', 'sdc': 'Sassarese Sardinian',
-                'sdh': 'Southern Kurdish', 'see': 'Seneca', 'sef': 'Cebaara Senufo',
-                'seh': 'Sena', 'sei': 'Seri', 'ses': 'Koyraboro Senni Songhai',
-                'sga': 'Old Irish', 'sgs': 'Samogitian', 'shi': 'Tachelhit', 'shk': 'Shilluk',
-                'shn': 'Shan', 'shs': 'Shuswap', 'sia': 'Akkala Sami', 'sid': 'Sidamo',
-                'sig': 'Paasaal', 'sil': 'Sisaala', 'sim': 'Mende', 'sjw': 'Shawnee',
-                'skr': 'Saraiki', 'slr': 'Salar', 'sly': 'Selayar', 'sm': 'Samoan',
-                'sml': 'Central Sama', 'smm': 'Musasa', 'smp': 'Samaritan', 'smq': 'Samo',
-                'sms': 'Skolt Sami', 'snh': 'Shinabo', 'snp': 'Siane', 'snx': 'Sam',
-                'sny': 'Saniyo-Hiyowe', 'soa': 'Thai Song', 'sok': 'Sokoro', 'soq': 'Kanasi',
-                'sqt': 'Soqotri', 'sr': 'Serbian', 'srb': 'Sora', 'srm': 'Saramaccan',
-                'srr': 'Serer', 'srx': 'Sirmauri', 'ssg': 'Seimat', 'ssy': 'Saho',
-                'st': 'Southern Sotho', 'stb': 'Northern Subanen', 'ste': 'Liana-Seti',
-                'stf': 'Seta', 'stg': 'Trieng', 'stk': 'Arammba', 'stm': 'Setaman',
-                'stp': 'Southeastern Tepehuan', 'stw': 'Satawalese', 'sua': 'Sulka',
-                'sue': 'Suena', 'sui': 'Suki', 'suk': 'Sukuma', 'sur': 'Mwaghavul',
-                'sus': 'Susu', 'suv': 'Sulung', 'suy': 'Suyá', 'suz': 'Sunwar',
-                'sv': 'Swedish', 'swb': 'Maore Comorian', 'swf': 'Sere', 'swg': 'Swabian',
-                'swi': 'Sui', 'swj': 'Sira', 'swp': 'Suau', 'swq': 'Sharwa',
-                'swr': 'Saweru', 'swt': 'Sawila', 'swu': 'Suwawa', 'swv': 'Shekhawati',
-                'sww': 'Sowa', 'swx': 'Suruahá', 'swy': 'Sarua', 'sxb': 'Suba',
-                'sxc': 'Sicanian', 'sxe': 'Sighu', 'sxg': 'Shixing', 'sxk': 'Southern Kalapuya',
-                'sxm': 'Samre', 'sxn': 'Sangir', 'sxr': 'Saaroa', 'sxs': 'Sasaru',
-                'sxu': 'Upper Saxon', 'sxw': 'Saxwe Gbe', 'sya': 'Siang', 'syb': 'Central Subanen',
-                'syc': 'Classical Syriac', 'syi': 'Seki', 'syk': 'Sukur', 'syl': 'Sylheti',
-                'sym': 'Maya Samo', 'syn': 'Senaya', 'syo': 'Suoy', 'sys': 'Sinyar',
-                'syw': 'Kagate', 'sza': 'Semelai', 'szb': 'Ngalum', 'szc': 'Semaq Beri',
-                'szd': 'Seru', 'sze': 'Seze', 'szg': 'Sengele', 'szl': 'Silesian',
-                'szn': 'Sula', 'szp': 'Suabo', 'szs': 'Solomon Islands Sign Language',
-                'szv': 'Isu', 'szw': 'Sawai', 'szy': 'Sakizaya', 'ta': 'Tamil',
-                'tab': 'Tabassaran', 'taj': 'Eastern Tamang', 'tal': 'Tal',
-                'tan': 'Tangale', 'taq': 'Tamasheq', 'tbc': 'Takia', 'tbd': 'Kaki Ae',
-                'tbf': 'Mandara', 'tbg': 'North Tairora', 'tbh': 'Thurawal',
-                'tbi': 'Gaam', 'tbj': 'Tiang', 'tbk': 'Calamian Tagbanwa',
-                'tbl': 'Tboli', 'tbm': 'Tagbu', 'tbn': 'Barro Negro Tunebo',
-                'tbo': 'Tawala', 'tbp': 'Taworta', 'tbq': 'Tibeto-Burman languages',
-                'tbr': 'Tumtum', 'tbs': 'Tanguat', 'tbt': 'Tembo', 'tbu': 'Tubar',
-                'tbv': 'Tobo', 'tbw': 'Tagbanwa', 'tbx': 'Kapin', 'tby': 'Tabaru',
-                'tbz': 'Ditammari', 'tca': 'Ticuna', 'tcb': 'Tanacross', 'tcc': 'Datooga',
-                'tcd': 'Tafi', 'tce': 'Southern Tutchone', 'tcf': 'Malinaltepec Me'phaa',
-                'tcg': 'Tamagario', 'tch': 'Turks And Caicos Creole English',
-                'tci': 'Wára', 'tck': 'Tchitchege', 'tcl': 'Taman', 'tcm': 'Tanahmerah',
-                'tcn': 'Tichurong', 'tco': 'Taungyo', 'tcp': 'Tawr Chin', 'tcq': 'Kaiy',
-                'tcs': 'Torres Strait Creole', 'tct': 'T'en', 'tcu': 'Southeastern Tarahumara',
-                'tcw': 'Tecpatlán Totonac', 'tcx': 'Toda', 'tcy': 'Tulu', 'tcz': 'Thado Chin',
-                'tda': 'Tagdal', 'tdb': 'Panchpargania', 'tdc': 'Emberá-Tadó',
-                'tdd': 'Tai Nüa', 'tde': 'Tiranige Diga Dogon', 'tdf': 'Talieng',
-                'tdg': 'Western Tamang', 'tdh': 'Thulung', 'tdi': 'Tomadino',
-                'tdj': 'Tajio', 'tdk': 'Tambas', 'tdl': 'Sur', 'tdn': 'Tondano',
-                'tdo': 'Toma', 'tdq': 'Tita', 'tdr': 'Todrah', 'tds': 'Doutai',
-                'tdt': 'Tetun Dili', 'tdu': 'Tempasuk Dusun', 'tdv': 'Toro',
-                'tdx': 'Tandroy-Mahafaly Malagasy', 'tdy': 'Tadyawan', 'te': 'Telugu',
-                'tea': 'Temiar', 'teb': 'Tetete', 'tec': 'Terik', 'ted': 'Tepo Krumen',
-                'tee': 'Huehuetla Tepehua', 'tef': 'Teressa', 'teg': 'Teke-Tege',
-                'teh': 'Tehuelche', 'tei': 'Torricelli', 'tek': 'Ibali Teke',
-                'tem': 'Timne', 'ten': 'Tama', 'teo': 'Teso', 'tep': 'Tepecano',
-                'teq': 'Temein', 'ter': 'Tereno', 'tes': 'Tengger', 'tet': 'Tetum',
-                'teu': 'Soo', 'tev': 'Teor', 'tew': 'Tewa', 'tex': 'Tennet',
-                'tey': 'Tulishi', 'tfi': 'Tofin Gbe', 'tfn': 'Tanaina', 'tfo': 'Tefaro',
-                'tfr': 'Teribe', 'tft': 'Ternate', 'tg': 'Tajik', 'tga': 'Sagalla',
-                'tgb': 'Tobilung', 'tgc': 'Tigak', 'tgd': 'Ciwogai', 'tge': 'Eastern Gorkha Tamang',
-                'tgf': 'Chalikha', 'tgg': 'Tangga', 'tgh': 'Tobagonian Creole English',
-                'tgi': 'Lawunuia', 'tgj': 'Tagin', 'tgk': 'Tajik', 'tgl': 'Tagalog',
-                'tgn': 'Tandaganon', 'tgo': 'Sudest', 'tgp': 'Tangoa', 'tgq': 'Tring',
-                'tgr': 'Tareng', 'tgs': 'Nume', 'tgt': 'Central Tagbanwa', 'tgu': 'Tanggu',
-                'tgv': 'Tingui-Boto', 'tgw': 'Tagwana Senoufo', 'tgx': 'Tagish',
-                'tgy': 'Togoyo', 'tgz': 'Tagalaka', 'th': 'Thai', 'thd': 'Thayore',
-                'the': 'Chitwania Tharu', 'thf': 'Thangmi', 'thh': 'Northern Tarahumara',
-                'thi': 'Tai Long', 'thk': 'Tharaka', 'thl': 'Dangaura Tharu',
-                'thm': 'Aheu', 'thn': 'Thachanadan', 'thp': 'Thompson', 'thq': 'Kochila Tharu',
-                'thr': 'Rana Tharu', 'ths': 'Thakali', 'tht': 'Tahltan', 'thu': 'Thuri',
-                'thv': 'Tahaggart Tamahaq', 'thw': 'Thudam', 'thy': 'Tha', 'thz': 'Tayart Tamajeq',
-                'ti': 'Tigrinya', 'tia': 'Tidikelt Tamazight', 'tic': 'Tira', 'tid': 'Tidong',
-                'tif': 'Tifal', 'tig': 'Tigre', 'tih': 'Timugon Murut', 'tii': 'Tiene',
-                'tij': 'Tilung', 'tik': 'Tikar', 'til': 'Tillamook', 'tim': 'Timbe',
-                'tin': 'Tindi', 'tio': 'Teop', 'tip': 'Trimuris', 'tiq': 'Tiéfo',
-                'tis': 'Masadiit Itneg', 'tit': 'Tinigua', 'tiu': 'Adasen', 'tiv': 'Tiv',
-                'tiw': 'Tiwi', 'tix': 'Southern Tiwa', 'tiy': 'Tiruray', 'tiz': 'Tai Hongjin',
-                'tja': 'Tajuasohn', 'tjg': 'Tunjung', 'tji': 'Northern Tujia', 'tjl': 'Tai Laing',
-                'tjm': 'Timucua', 'tjn': 'Tonjon', 'tjo': 'Temacine Tamazight', 'tjp': 'Tjupany',
-                'tjs': 'Southern Tujia', 'tju': 'Tjurruru', 'tjw': 'Djabwurrung',
-                'tk': 'Turkmen', 'tka': 'Truká', 'tkb': 'Buksa', 'tkd': 'Tukudede',
-                'tke': 'Takwane', 'tkf': 'Tukumanféd', 'tkg': 'Tesaka Malagasy',
-                'tkl': 'Tokelau', 'tkm': 'Takelma', 'tkn': 'Toku-No-Shima', 'tkp': 'Tikopia',
-                'tkq': 'Tee', 'tkr': 'Tsakhur', 'tks': 'Takestani', 'tkt': 'Kathoriya Tharu',
-                'tku': 'Upper Necaxa Totonac', 'tkv': 'Mur Pano', 'tkw': 'Teanu',
-                'tkx': 'Tangko', 'tkz': 'Takua', 'tl': 'Tagalog', 'tla': 'Southwestern Tepehuan',
-                'tlb': 'Tobelo', 'tlc': 'Yecuatla Totonac', 'tld': 'Talaud', 'tlf': 'Telefol',
-                'tlg': 'Tofanma', 'tlh': 'Klingon', 'tli': 'Tlingit', 'tlj': 'Talinga-Bwisi',
-                'tlk': 'Taloki', 'tll': 'Tetela', 'tlm': 'Tolomako', 'tln': 'Talondo',
-                'tlo': 'Talodi', 'tlp': 'Filomena Mata-Coahuitlán Totonac',
-                'tlq': 'Tai Loi', 'tlr': 'Talise', 'tls': 'Tambotalo', 'tlt': 'Sou Nama',
-                'tlu': 'Tulehu', 'tlv': 'Taliabu', 'tlx': 'Khehek', 'tly': 'Talysh',
-                'tma': 'Tama', 'tmb': 'Katbol', 'tmc': 'Tumak', 'tmd': 'Haruai',
-                'tme': 'Tremembé', 'tmf': 'Toba-Maskoy', 'tmg': 'Ternateño',
-                'tmh': 'Tamashek', 'tmi': 'Tutuba', 'tmj': 'Samarokena', 'tmk': 'Northwestern Tamang',
-                'tml': 'Tamnim Citak', 'tmm': 'Tai Thanh', 'tmn': 'Taman', 'tmo': 'Temoq',
-                'tmp': 'Tai Mène', 'tmq': 'Tumleo', 'tmr': 'Jewish Babylonian Aramaic',
-                'tms': 'Tima', 'tmt': 'Tasmate', 'tmu': 'Iau', 'tmv': 'Tembo',
-                'tmw': 'Temuan', 'tmy': 'Tami', 'tmz': 'Tamanaku', 'tn': 'Tswana',
-                'tna': 'Tacana', 'tnb': 'Western Tunebo', 'tnc': 'Tanimuca-Retuarã',
-                'tnd': 'Angosturas Tunebo', 'tne': 'Tinoc Kallahan', 'tnf': 'Tangshewi',
-                'tng': 'Tobanga', 'tnh': 'Maiani', 'tni': 'Tandia', 'tnk': 'Kwamera',
-                'tnl': 'Lenakel', 'tnm': 'Tabla', 'tnn': 'North Tanna', 'tno': 'Toromono',
-                'tnp': 'Whitesands', 'tnq': 'Taino', 'tnr': 'Ménik', 'tns': 'Tenis',
-                'tnt': 'Tontemboan', 'tnu': 'Tay Khang', 'tnv': 'Tangchangya',
-                'tnw': 'Tonsawang', 'tnx': 'Tanema', 'tny': 'Tongwe', 'tnz': 'Ten',
-                'to': 'Tongan', 'tob': 'Toba', 'toc': 'Coyutla Totonac', 'tod': 'Toma',
-               
+            installed_packages = argostranslate.package.get_installed_packages()
+            
+            # Find appropriate package
+            for pkg in installed_packages:
+                if pkg.from_code == from_lang and pkg.to_code == to_lang:
+                    translation = pkg.translate(text)
+                    return translation
+            
+            st.error(f"No translation model found for {self.get_language_name(from_lang)} to {self.get_language_name(to_lang)}")
+            return None
+        except Exception as e:
+            st.error(f"Translation error: {e}")
+            return None
+
+class TTSManager:
+    @staticmethod
+    def text_to_speech(text, language='en'):
+        """Convert text to speech using gTTS"""
+        try:
+            if len(text) > 500:
+                text = text[:500] + "..."
+            tts = gTTS(text=text, lang=language, slow=False)
+            audio_file = io.BytesIO()
+            tts.write_to_fp(audio_file)
+            audio_file.seek(0)
+            return audio_file
+        except Exception as e:
+            st.error(f"TTS Error: {e}")
+            return None
+
+def show_login_page(user_manager):
+    st.title("🌐 AI Translator Pro - Login")
+    st.markdown("---")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Login")
+        login_username = st.text_input("Username", key="login_user")
+        login_password = st.text_input("Password", type="password", key="login_pass")
+        
+        if st.button("Login", type="primary", use_container_width=True):
+            if login_username and login_password:
+                success, message = user_manager.login(login_username, login_password)
+                if success:
+                    st.session_state.user = login_username
+                    st.session_state.history = user_manager.get_user_history(login_username)
+                    st.success(message)
+                    st.rerun()
+                else:
+                    st.error(message)
+            else:
+                st.error("Please enter both username and password")
+    
+    with col2:
+        st.subheader("Create Account")
+        signup_username = st.text_input("Username", key="signup_user")
+        signup_password = st.text_input("Password", type="password", key="signup_pass")
+        confirm_password = st.text_input("Confirm Password", type="password", key="confirm_pass")
+        
+        if st.button("Create Account", type="secondary", use_container_width=True):
+            if signup_username and signup_password:
+                if signup_password == confirm_password:
+                    success, message = user_manager.create_user(signup_username, signup_password)
+                    if success:
+                        st.success(message)
+                    else:
+                        st.error(message)
+                else:
+                    st.error("Passwords don't match")
+            else:
+                st.error("Please fill all fields")
+    
+    st.markdown("---")
+    st.info("💡 **Demo Accounts:** You can create your own account or use: username: `demo`, password: `demo`")
+
+def show_main_app(user_manager, translation_manager, tts_manager):
+    st.sidebar.title("🔐 User Management")
+    st.sidebar.success(f"Welcome, **{st.session_state.user}**!")
+    
+    if st.sidebar.button("Logout", use_container_width=True):
+        st.session_state.user = None
+        st.session_state.history = []
+        st.rerun()
+    
+    # History in sidebar
+    st.sidebar.subheader("📚 Recent Translations")
+    if st.session_state.history:
+        for i, item in enumerate(st.session_state.history[:5]):
+            with st.sidebar.expander(f"{item['type'].title()} - {item['timestamp'][11:16]}"):
+                st.write(f"**{item['from_lang']}** → **{item['to_lang']}**")
+                if item['type'] == 'text':
+                    st.text_area("Input", item['input'][:80] + "...", key=f"hist_{i}", height=60, label_visibility="collapsed")
+    else:
+        st.sidebar.info("No translation history yet")
+    
+    # Main content
+    st.title("🌐 AI Translator Pro")
+    st.markdown("Unlimited Text Translation with 1000+ Languages Support")
+    st.markdown("---")
+    
+    # Language selection
+    available_languages = translation_manager.get_available_languages()
+    
+    if not available_languages:
+        st.error("""
+        ❌ **No translation models installed!**
+        
+        Please install at least one translation model using these commands:
+        ```bash
+        pip install argostranslate
+        argospm update
+        argospm install translate-en-es
+        argospm install translate-en-fr
+        argospm install translate-en-de
+        argospm install translate-en-zh
+        # Add more languages as needed
+        ```
+        
+        **Available models:** translate-[from]-[to] (e.g., translate-en-es for English to Spanish)
+        """)
+        return
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        from_lang = st.selectbox(
+            "From Language", 
+            available_languages,
+            format_func=lambda x: f"{x[1]} ({x[0]})",
+            index=next((i for i, (code, name) in enumerate(available_languages) if code == 'en'), 0)
+        )
+        from_lang_code = from_lang[0]
+    
+    with col2:
+        to_lang = st.selectbox(
+            "To Language", 
+            available_languages,
+            format_func=lambda x: f"{x[1]} ({x[0]})",
+            index=next((i for i, (code, name) in enumerate(available_languages) if code == 'es'), 1)
+        )
+        to_lang_code = to_lang[0]
+    
+    # Text translation
+    st.subheader("📝 Text Translation")
+    
+    input_text = st.text_area(
+        "Enter text to translate:",
+        height=200,
+        placeholder="Type or paste your text here... (No limits - translate as much as you want!)",
+        key="text_input"
+    )
+    
+    col1, col2 = st.columns([3, 1])
+    
+    with col2:
+        if st.button("🚀 Translate Text", type="primary", use_container_width=True):
+            if input_text.strip():
+                with st.spinner("Translating..."):
+                    translated_text = translation_manager.translate_text(input_text, from_lang_code, to_lang_code)
+                    
+                    if translated_text:
+                        # Display results
+                        st.subheader("Translation Results")
+                        
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.text_area(
+                                f"Original Text ({from_lang[1]})", 
+                                input_text, 
+                                height=300, 
+                                key="original_display"
+                            )
+                        
+                        with col2:
+                            st.text_area(
+                                f"Translated Text ({to_lang[1]})", 
+                                translated_text, 
+                                height=300, 
+                                key="translated_display"
+                            )
+                        
+                        # Audio & Download section
+                        st.subheader("🎵 Audio & Download Options")
+                        
+                        audio_col, download_col = st.columns(2)
+                        
+                        with audio_col:
+                            if st.button("🔊 Listen to Translation", use_container_width=True):
+                                audio_file = tts_manager.text_to_speech(translated_text, to_lang_code)
+                                if audio_file:
+                                    st.audio(audio_file, format='audio/mp3')
+                                    st.success("Audio generated successfully!")
+                        
+                        with download_col:
+                            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                            txt_content = f"""Translation Result - {timestamp}
+Source: {from_lang[1]} ({from_lang_code})
+Target: {to_lang[1]} ({to_lang_code})
+
+Original Text:
+{input_text}
+
+Translated Text:
+{translated_text}
+
+Generated by AI Translator Pro
+"""
+                            st.download_button(
+                                label="📥 Download Translation",
+                                data=txt_content,
+                                file_name=f"translation_{timestamp}.txt",
+                                mime="text/plain",
+                                use_container_width=True
+                            )
+                        
+                        # Save to history
+                        history_item = {
+                            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            'type': 'text',
+                            'from_lang': f"{from_lang[1]} ({from_lang_code})",
+                            'to_lang': f"{to_lang[1]} ({to_lang_code})",
+                            'input': input_text[:500],
+                            'output': translated_text[:500]
+                        }
+                        if user_manager.save_user_history(st.session_state.user, history_item):
+                            st.session_state.history = user_manager.get_user_history(st.session_state.user)
+                            st.success("Translation saved to history!")
+                    else:
+                        st.error("Translation failed. Please try different languages or check if the translation model is installed.")
+            else:
+                st.warning("Please enter some text to translate")
+    
+    # Language information
+    with st.expander("🌍 Language Support Information"):
+        st.write(f"**Currently installed languages:** {len(available_languages)}")
+        languages_display = ", ".join([f"{name} ({code})" for code, name in available_languages])
+        st.text_area("Installed Languages:", languages_display, height=150)
+        
+        st.info("""
+        **To add more languages:**
+        ```bash
+        argospm update
+        argospm install translate-en-de    # English to German
+        argospm install translate-en-ja    # English to Japanese
+        argospm install translate-en-ar    # English to Arabic
+        # And many more...
+        ```
+        
+        **Supported language pairs:** 1000+ combinations available
+        """)
+
+def main():
+    init_session_state()
+    
+    st.set_page_config(
+        page_title="AI Translator Pro",
+        page_icon="🌐",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+    
+    # Initialize managers
+    user_manager = UserManager()
+    translation_manager = TranslationManager()
+    tts_manager = TTSManager()
+    
+    if st.session_state.user is None:
+        show_login_page(user_manager)
+    else:
+        show_main_app(user_manager, translation_manager, tts_manager)
+
+if __name__ == "__main__":
+    main()
